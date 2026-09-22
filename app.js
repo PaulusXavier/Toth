@@ -59,6 +59,16 @@ function formatarData(d) {
     return `${p[2]}/${p[1]}/${p[0]}`;
 }
 
+// new Date().toISOString() usa UTC: perto da meia-noite em Roraima
+// (UTC-4) isso podia preencher o campo "Data" do novo registro com o
+// dia seguinte por engano. Esta função usa o fuso horário local do
+// aparelho para gerar o "YYYY-MM-DD" de hoje corretamente.
+function dataLocalHoje() {
+    const agora = new Date();
+    const semFusoUTC = new Date(agora.getTime() - agora.getTimezoneOffset() * 60000);
+    return semFusoUTC.toISOString().split('T')[0];
+}
+
 // Corrigido para bater com as opções do formulário e as abas do menu
 // (antes havia "visita/pesquisa/atividade", que não existiam no HTML).
 const LABELS_TIPO = {
@@ -296,6 +306,7 @@ function abrirModal(id = null) {
     const modalTitle = document.getElementById('modalTitle');
 
     if (!modalBackdrop) return;
+    if (window.pararDitadoPorVoz) window.pararDitadoPorVoz();
     modalBackdrop.style.display = 'flex';
 
     if (id) {
@@ -319,7 +330,7 @@ function abrirModal(id = null) {
         modalTitle.textContent = 'Novo registro';
         entryForm.reset();
         document.getElementById('entryId').value = '';
-        document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('entryDate').value = dataLocalHoje();
         document.getElementById('entryLat').value = '';
         document.getElementById('entryLng').value = '';
         deleteEntryBtn.style.display = 'none';
@@ -329,6 +340,7 @@ function abrirModal(id = null) {
 
 function fecharModal() {
     const modalBackdrop = document.getElementById('modalBackdrop');
+    if (window.pararDitadoPorVoz) window.pararDitadoPorVoz();
     if (modalBackdrop) modalBackdrop.style.display = 'none';
 }
 
@@ -531,7 +543,7 @@ function baixarArquivo(conteudo, nomeArquivo, mimeType) {
 
 function exportarJSON() {
     if (registros.length === 0) return alert('Nenhum registro para exportar.');
-    baixarArquivo(JSON.stringify(registros, null, 2), `caderno-campo-backup-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+    baixarArquivo(JSON.stringify(registros, null, 2), `caderno-campo-backup-${dataLocalHoje()}.json`, 'application/json');
 }
 
 function exportarCSV() {
@@ -549,7 +561,7 @@ function exportarCSV() {
         linhas.push(colunas.map(c => escapeCsv(reg[c])).join(';'));
     });
 
-    baixarArquivo('\uFEFF' + linhas.join('\n'), `caderno-campo-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv;charset=utf-8');
+    baixarArquivo('\uFEFF' + linhas.join('\n'), `caderno-campo-${dataLocalHoje()}.csv`, 'text/csv;charset=utf-8');
 }
 
 function exportarWord() {
@@ -576,15 +588,94 @@ function exportarWord() {
             ${corpo}
         </body></html>`;
 
-    baixarArquivo(html, `caderno-campo-${new Date().toISOString().split('T')[0]}.doc`, 'application/msword');
+    // O BOM (\uFEFF) no início ajuda o Word a reconhecer corretamente que o
+    // conteúdo está em UTF-8 — sem ele, algumas versões do Word podem exibir
+    // acentos e cedilhas corrompidos (ex.: "atenção" virando "atenÃ§Ã£o").
+    baixarArquivo('\uFEFF' + html, `caderno-campo-${dataLocalHoje()}.doc`, 'application/msword');
 }
 
+// A versão anterior desta função abria uma aba nova e chamava a caixa de
+// impressão do navegador, torcendo para o usuário escolher "Salvar como
+// PDF". Isso é frágil: bloqueadores de pop-up podem barrar a aba, um
+// tempo fixo de espera podia cortar o conteúdo antes de terminar de
+// carregar, e — o mais importante — como o app roda como aplicativo
+// instalado ("standalone") no celular, abrir aba + imprimir é justamente
+// um dos cenários que mais falha no iPhone (a aba pode abrir em branco ou
+// nem oferecer a opção de salvar como PDF).
+// Por isso agora o PDF é gerado de verdade no próprio navegador (com a
+// biblioteca jsPDF) e baixado direto, do mesmo jeito que o JSON/CSV/Word —
+// sem depender de pop-up nem de caixa de impressão.
 function exportarPDF() {
     if (registros.length === 0) return alert('Nenhum registro para exportar.');
 
+    if (!(window.jspdf && window.jspdf.jsPDF)) {
+        // Sem internet no primeiro carregamento a biblioteca de PDF pode não
+        // ter chegado a baixar; nesse caso, cai para o método antigo
+        // (imprimir/salvar como PDF) em vez de simplesmente não fazer nada.
+        console.warn('jsPDF indisponível — usando o método de impressão como alternativa.');
+        return exportarPDFViaImpressao();
+    }
+
+    const ordenados = [...registros].sort((a, b) => new Date(b.entryDate) - new Date(a.entryDate));
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const margem = 18;
+    const larguraUtil = doc.internal.pageSize.getWidth() - margem * 2;
+    const alturaPagina = doc.internal.pageSize.getHeight();
+    let y = margem;
+
+    function novaPagina() {
+        doc.addPage();
+        y = margem;
+    }
+
+    // Escreve um bloco de texto, quebrando linhas pela largura da página e
+    // pulando de página automaticamente quando o conteúdo não couber —
+    // é essa parte que o método antigo (baseado só em CSS de impressão)
+    // não garantia de forma confiável.
+    function escreverParagrafo(texto, opcoes = {}) {
+        const { tamanho = 10, estilo = 'normal', cor = [20, 20, 20], espacamentoAntes = 0, entrelinha = 5 } = opcoes;
+        if (!texto) return;
+        y += espacamentoAntes;
+        doc.setFont('helvetica', estilo);
+        doc.setFontSize(tamanho);
+        doc.setTextColor(cor[0], cor[1], cor[2]);
+        const linhas = doc.splitTextToSize(String(texto), larguraUtil);
+        linhas.forEach((linha) => {
+            if (y + entrelinha > alturaPagina - margem) novaPagina();
+            doc.text(linha, margem, y);
+            y += entrelinha;
+        });
+    }
+
+    ordenados.forEach((reg, indice) => {
+        if (indice > 0) novaPagina();
+
+        escreverParagrafo('Caderno de Campo — Paulo Xavier', { tamanho: 13, estilo: 'bold', entrelinha: 6 });
+        escreverParagrafo(
+            `${formatarData(reg.entryDate)} — ${LABELS_TIPO[reg.entryType] || reg.entryType} — ${LABELS_STATUS[reg.entryStatus] || reg.entryStatus}`,
+            { tamanho: 9, cor: [90, 90, 90], espacamentoAntes: 1, entrelinha: 4.5 }
+        );
+        escreverParagrafo(reg.entrySummary || '', { tamanho: 12, estilo: 'bold', espacamentoAntes: 3, entrelinha: 5.5 });
+        escreverParagrafo(`Local/Instituição: ${reg.entryLocation || '—'}`, { espacamentoAntes: 3 });
+        escreverParagrafo(`Código do caso/sujeito: ${reg.entryCode || '—'}`);
+        escreverParagrafo(`Tags: ${reg.entryTags || '—'}`);
+        if (reg.entryLat && reg.entryLng) {
+            escreverParagrafo(`Coordenadas: ${reg.entryLat}, ${reg.entryLng}`, { tamanho: 9, cor: [90, 90, 90] });
+        }
+        escreverParagrafo(reg.entryDetails || '', { espacamentoAntes: 4 });
+    });
+
+    doc.save(`caderno-campo-${dataLocalHoje()}.pdf`);
+}
+
+// Alternativa de reserva (mesma técnica da versão anterior): usada só se a
+// biblioteca de gerar PDF não estiver disponível por algum motivo.
+function exportarPDFViaImpressao() {
     const win = window.open('', '_blank');
     if (!win) {
-        alert('O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente novamente.');
+        alert('Não foi possível gerar o PDF agora (biblioteca indisponível) nem abrir a janela de impressão como alternativa. Verifique sua conexão e tente novamente.');
         return;
     }
 
@@ -602,17 +693,17 @@ function exportarPDF() {
         .meta { color: #555; font-size: 11px; }
         .campo { margin: 4px 0; overflow-wrap: break-word; word-break: break-word; }
         .obs { white-space: pre-wrap; margin-top: 10px; overflow-wrap: break-word; word-break: break-word; line-height: 1.5; }
-        .map-link { font-size: 11px; }
     </style></head><body>`;
 
     ordenados.forEach(reg => {
         html += `<div class="folha">
+            <h1>Caderno de Campo — Paulo Xavier</h1>
             <p class="meta">${formatarData(reg.entryDate)} — ${escapeHtml(LABELS_TIPO[reg.entryType] || reg.entryType)} — ${escapeHtml(LABELS_STATUS[reg.entryStatus] || reg.entryStatus)}</p>
             <h2>${escapeHtml(reg.entrySummary)}</h2>
             <p class="campo"><strong>Local/Instituição:</strong> ${escapeHtml(reg.entryLocation || '—')}</p>
             <p class="campo"><strong>Código:</strong> ${escapeHtml(reg.entryCode || '—')}</p>
             <p class="campo"><strong>Tags:</strong> ${escapeHtml(reg.entryTags || '—')}</p>
-            ${(reg.entryLat && reg.entryLng) ? `<p class="campo map-link"><strong>Coordenadas:</strong> ${reg.entryLat}, ${reg.entryLng}</p>` : ''}
+            ${(reg.entryLat && reg.entryLng) ? `<p class="campo"><strong>Coordenadas:</strong> ${reg.entryLat}, ${reg.entryLng}</p>` : ''}
             <p class="obs">${escapeHtml(reg.entryDetails || '')}</p>
         </div>`;
     });
@@ -620,7 +711,15 @@ function exportarPDF() {
     html += `</body></html>`;
     win.document.write(html);
     win.document.close();
-    setTimeout(() => { win.print(); win.close(); }, 500);
+
+    // Espera o conteúdo terminar de carregar (em vez de um tempo fixo) antes
+    // de mandar imprimir, para não cortar registros longos pela metade.
+    const acionarImpressao = () => { win.print(); win.close(); };
+    if (win.document.readyState === 'complete') {
+        setTimeout(acionarImpressao, 150);
+    } else {
+        win.addEventListener('load', () => setTimeout(acionarImpressao, 150));
+    }
 }
 
 // ------------------------------------------------------------
@@ -688,6 +787,17 @@ function importarBackup(file) {
 // Ditado por voz — transcreve a fala em tempo real direto no
 // campo de Observações Técnicas/Psicossociais (Web Speech API).
 // Não grava nem guarda o áudio: tudo vira texto na hora.
+//
+// Revisado para uso intenso (é o recurso mais usado no dia a dia):
+// - Insere o texto ditado na posição do cursor, preservando o que
+//   já existir depois dele (antes, ditar sempre jogava tudo no fim).
+// - Mostra o tempo de gravação em andamento.
+// - Uma falha de permissão/rede/microfone não é mais apagada pela
+//   mensagem genérica "Transcrição concluída." que vinha logo depois.
+// - Para de tentar reiniciar sozinho após falhas repetidas seguidas,
+//   em vez de entrar num loop de reinícios (ex.: microfone ocupado).
+// - Pode ser interrompido de fora (ex.: ao fechar o modal) para nunca
+//   deixar o microfone escutando em segundo plano.
 // ------------------------------------------------------------
 function configurarDitadoPorVoz() {
     const botao = document.getElementById('dictateBtn');
@@ -710,9 +820,15 @@ function configurarDitadoPorVoz() {
     reconhecimento.interimResults = true;
 
     let gravando = false;
+    let iniciando = false;    // evita cliques duplicados entre o pedido de start() e o onstart
     let paradaManual = false;
-    let textoBase = '';
-    let transcricaoFinal = '';
+    let textoAntes = '';      // texto já existente antes do cursor, preservado
+    let textoDepois = '';     // texto já existente depois do cursor, preservado
+    let transcricaoFinal = ''; // trechos confirmados na sessão de ditado atual
+    let mensagemFinal = '';   // mensagem de erro a manter visível quando a gravação encerrar
+    let falhasSeguidas = 0;   // conta reinícios automáticos sem sucesso, evita loop
+    let inicioGravacao = 0;
+    let timerId = null;
 
     function juntarTexto(base, adicional) {
         if (!adicional) return base;
@@ -720,40 +836,77 @@ function configurarDitadoPorVoz() {
         return /[\s\n]$/.test(base) ? base + adicional : base + ' ' + adicional;
     }
 
+    function formatarDuracao(ms) {
+        const s = Math.max(0, Math.floor(ms / 1000));
+        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }
+
+    function atualizarTimer() {
+        statusEl.textContent = `🔴 Gravando... ${formatarDuracao(Date.now() - inicioGravacao)}`;
+    }
+
     function ligarUI() {
         botao.classList.add('recording');
         botao.textContent = '⏹️';
         botao.title = 'Parar ditado';
-        statusEl.textContent = '🔴 Gravando... fale agora';
+        botao.setAttribute('aria-label', 'Parar ditado');
         statusEl.classList.add('active');
+        inicioGravacao = Date.now();
+        atualizarTimer();
+        clearInterval(timerId);
+        timerId = setInterval(atualizarTimer, 1000);
     }
 
     function desligarUI(mensagem) {
         botao.classList.remove('recording');
         botao.textContent = '🎙️';
         botao.title = 'Ditar por voz';
+        botao.setAttribute('aria-label', 'Ditar por voz');
         statusEl.classList.remove('active');
+        clearInterval(timerId);
+        timerId = null;
         statusEl.textContent = mensagem || '';
     }
 
+    // Captura onde o ditado deve entrar: na posição do cursor (ou da
+    // seleção, que é substituída), guardando o que vem antes e depois.
+    function prepararInsercao() {
+        const inicio = textarea.selectionStart ?? textarea.value.length;
+        const fim = textarea.selectionEnd ?? textarea.value.length;
+        textoAntes = textarea.value.slice(0, inicio);
+        textoDepois = textarea.value.slice(fim);
+        transcricaoFinal = '';
+    }
+
+    function pararDitado() {
+        if (!gravando) return;
+        paradaManual = true;
+        try { reconhecimento.stop(); } catch (err) { /* já parado, ignora */ }
+    }
+    // Exposto para o resto do app conseguir interromper o ditado por
+    // fora (ex.: ao fechar/trocar o modal), sem deixar o mic ligado.
+    window.pararDitadoPorVoz = pararDitado;
+
     botao.addEventListener('click', () => {
-        if (gravando) {
-            paradaManual = true;
-            reconhecimento.stop();
-            return;
-        }
+        if (iniciando) return;
+        if (gravando) { pararDitado(); return; }
         try {
-            textoBase = textarea.value;
-            transcricaoFinal = '';
+            iniciando = true;
             paradaManual = false;
+            mensagemFinal = '';
+            falhasSeguidas = 0;
+            prepararInsercao();
             reconhecimento.start();
         } catch (err) {
+            iniciando = false;
             console.error('Erro ao iniciar o ditado:', err);
         }
     });
 
     reconhecimento.onstart = () => {
+        iniciando = false;
         gravando = true;
+        falhasSeguidas = 0;
         ligarUI();
     };
 
@@ -767,35 +920,64 @@ function configurarDitadoPorVoz() {
                 interino += trecho;
             }
         }
-        textarea.value = juntarTexto(juntarTexto(textoBase, transcricaoFinal), interino);
+        const meio = juntarTexto(transcricaoFinal, interino);
+        const precisaEspaco = meio && textoDepois && !/[\s\n]$/.test(meio) && !/^[\s\n]/.test(textoDepois);
+        textarea.value = textoAntes + meio + (precisaEspaco ? ' ' : '') + textoDepois;
+        const posicaoCursor = (textoAntes + meio).length;
+        textarea.setSelectionRange(posicaoCursor, posicaoCursor);
     };
 
     reconhecimento.onerror = (event) => {
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-            desligarUI('Permissão de microfone negada. Habilite o acesso ao microfone nas configurações do navegador.');
+            mensagemFinal = 'Permissão de microfone negada. Habilite o acesso ao microfone nas configurações do navegador.';
+            paradaManual = true;
+        } else if (event.error === 'audio-capture') {
+            mensagemFinal = 'Nenhum microfone encontrado. Verifique se há um microfone conectado e liberado para o navegador.';
+            paradaManual = true;
+        } else if (event.error === 'network') {
+            mensagemFinal = 'Sem conexão para transcrever agora. Verifique a internet e tente novamente.';
             paradaManual = true;
         } else if (event.error === 'no-speech') {
-            // Silêncio momentâneo: deixa o próprio onend decidir se reinicia.
-        } else if (event.error === 'network') {
-            desligarUI('Sem conexão para transcrever agora. Verifique a internet e tente novamente.');
-            paradaManual = true;
+            // Silêncio momentâneo, é normal durante o ditado: o onend decide se reinicia.
+        } else if (event.error === 'aborted') {
+            // Se foi o próprio usuário quem parou (paradaManual já true), não faz nada.
+            // Se foi inesperado, conta como falha para não entrar num loop de reinícios.
+            if (!paradaManual) falhasSeguidas++;
         } else {
             console.warn('Erro no ditado por voz:', event.error);
+            falhasSeguidas++;
+        }
+        // Depois de falhas repetidas sem conseguir gravar, desiste de
+        // reiniciar sozinho para não travar tentando de novo sem parar.
+        if (falhasSeguidas >= 3 && !paradaManual) {
+            mensagemFinal = mensagemFinal || 'Não foi possível continuar o ditado. Toque no microfone para tentar de novo.';
+            paradaManual = true;
         }
     };
 
     reconhecimento.onend = () => {
         gravando = false;
+        iniciando = false;
         // O reconhecimento do navegador se encerra sozinho após um tempo
-        // ou um trecho de silêncio; se o usuário não pediu para parar,
-        // reinicia automaticamente para continuar ditando sem esforço.
+        // ou um trecho de silêncio; se o usuário não pediu para parar e
+        // não houve erro que precise de atenção, reinicia automaticamente
+        // para continuar ditando sem esforço — preservando tudo o que já
+        // foi escrito e a posição em que o texto está entrando.
         if (!paradaManual) {
-            textoBase = textarea.value;
+            textoAntes = textarea.value.slice(0, textarea.value.length - textoDepois.length);
             transcricaoFinal = '';
-            try { reconhecimento.start(); } catch (err) { desligarUI(''); }
+            try {
+                iniciando = true;
+                reconhecimento.start();
+            } catch (err) {
+                iniciando = false;
+                desligarUI(mensagemFinal || 'O ditado foi interrompido. Toque no microfone para continuar.');
+            }
         } else {
-            desligarUI('Transcrição concluída.');
-            setTimeout(() => { if (!gravando) statusEl.textContent = ''; }, 3000);
+            desligarUI(mensagemFinal || 'Transcrição concluída.');
+            if (!mensagemFinal) {
+                setTimeout(() => { if (!gravando) statusEl.textContent = ''; }, 3000);
+            }
         }
     };
 }
