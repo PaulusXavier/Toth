@@ -14,10 +14,54 @@
   --tech-hiero-tile: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"><g fill="none" stroke="%235d22d6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.22"><path d="M35,28 L100,28 L100,10"/><circle cx="100" cy="10" r="2.6" fill="%235d22d6" stroke="none"/><path d="M140,28 L140,60 L156,60 L156,90"/><circle cx="156" cy="60" r="2.6" fill="%235d22d6" stroke="none"/><path d="M156,150 L156,175 L191,175 L191,190"/><circle cx="191" cy="175" r="2.6" fill="%235d22d6" stroke="none"/><path d="M180,201 L120,201 L120,215 L80,215 L80,205"/><circle cx="120" cy="201" r="2.6" fill="%235d22d6" stroke="none"/><path d="M65,190 L45,190 L45,150"/><circle cx="45" cy="190" r="2.6" fill="%235d22d6" stroke="none"/><path d="M40,105 L40,60 L35,60 L35,42"/><circle cx="40" cy="60" r="2.6" fill="%235d22d6" stroke="none"/></g><g fill="none" stroke="%23c99a3a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"><g transform="translate(20,20)"><circle cx="15" cy="8" r="8"/><line x1="15" y1="16" x2="15" y2="40"/><line x1="2" y1="26" x2="28" y2="26"/></g><g transform="translate(120,18)"><path d="M0,10 C10,-4 30,-4 40,10 C30,15 10,15 0,10 Z"/><circle cx="20" cy="10" r="4"/><path d="M20,14 L16,24 L20,22 L24,24 Z"/><path d="M0,10 C-4,14 -6,18 -4,22"/></g><g transform="translate(30,110)"><path d="M0,10 Q10,0 20,10 T40,10"/><path d="M0,20 Q10,10 20,20 T40,20"/><path d="M0,30 Q10,20 20,30 T40,30"/></g><g transform="translate(140,110)"><circle cx="16" cy="16" r="9"/><line x1="16" y1="0" x2="16" y2="-8"/><line x1="16" y1="32" x2="16" y2="40"/><line x1="0" y1="16" x2="-8" y2="16"/><line x1="32" y1="16" x2="40" y2="16"/><line x1="4.7" y1="4.7" x2="-1.3" y2="-1.3"/><line x1="27.3" y1="4.7" x2="33.3" y2="-1.3"/><line x1="4.7" y1="27.3" x2="-1.3" y2="33.3"/><line x1="27.3" y1="27.3" x2="33.3" y2="33.3"/></g><g transform="translate(70,180)"><line x1="10" y1="0" x2="10" y2="42"/><line x1="10" y1="6" x2="0" y2="10"/><line x1="10" y1="14" x2="0" y2="18"/><line x1="10" y1="22" x2="0" y2="26"/><line x1="10" y1="6" x2="20" y2="10"/><line x1="10" y1="14" x2="20" y2="18"/><line x1="10" y1="22" x2="20" y2="26"/></g><g transform="translate(180,190)"><rect x="0" y="0" width="22" height="16" rx="2"/><line x1="0" y1="8" x2="22" y2="8"/></g></g></svg>');
 }
 
-body {
-  background:
+:root {
+  --toth-rule: rgba(93, 34, 214, .13);
+  --toth-rule-strong: rgba(93, 34, 214, .2);
+  --toth-margin-line: rgba(201, 154, 58, .6);
+  --toth-line-h: 26px;
+}
+
+/* ------------------------------------------------------------
+   Fundo geral: folha de caderno estilo egípcio — pauta horizontal
+   repetida por cima do mosaico de hieróglifos/circuitos, para que
+   toda a tela pareça uma página de caderno de campo.
+   ------------------------------------------------------------ */
+body,
+.sidebar {
+  background-color: var(--sand, #efe1c3);
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--toth-line-h) - 1px), var(--toth-rule) var(--toth-line-h)),
     linear-gradient(180deg, rgba(255, 250, 240, .55), rgba(239, 225, 195, .85)),
-    var(--sand, #efe1c3) var(--tech-hiero-tile) center / 220px repeat;
+    var(--tech-hiero-tile);
+  background-repeat: repeat, no-repeat, repeat;
+  background-position: 0 4px, 0 0, center;
+  background-size: 100% var(--toth-line-h), auto, 220px;
+}
+
+/* "Folhas" individuais: cartão de login, cada registro e o modal de
+   edição ganham a mesma pauta, mais uma linha de margem dourada à
+   esquerda, como uma página de caderno de verdade. */
+.auth-card,
+.modal,
+.entry-card {
+  position: relative;
+  background-color: var(--sand-pale);
+  background-image:
+    linear-gradient(90deg, transparent 0 34px, var(--toth-margin-line) 34px, var(--toth-margin-line) 35.5px, transparent 35.5px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--toth-line-h) - 1px), var(--toth-rule-strong) var(--toth-line-h));
+  background-repeat: no-repeat, repeat;
+  background-position: 0 0, 0 8px;
+  background-size: 100% 100%, 100% var(--toth-line-h);
+}
+
+.modal,
+.auth-card { padding-left: 2.5rem; }
+
+.entry-card { padding-left: 1.7rem; }
+
+@media (max-width: 640px) {
+  .modal,
+  .auth-card { padding-left: 1.5rem; }
 }
 
 .brand-mark {
@@ -43,9 +87,14 @@ body {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  background:
+  background-color: var(--sand, #efe1c3);
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--toth-line-h) - 1px), var(--toth-rule) var(--toth-line-h)),
     linear-gradient(135deg, rgba(255, 250, 240, .65), rgba(228, 211, 171, .6)),
-    var(--sand, #efe1c3) var(--tech-hiero-tile) center / 200px repeat;
+    var(--tech-hiero-tile);
+  background-repeat: repeat, no-repeat, repeat;
+  background-position: 0 4px, 0 0, center;
+  background-size: 100% var(--toth-line-h), auto, 200px;
 }
 
 .auth-screen::before {
