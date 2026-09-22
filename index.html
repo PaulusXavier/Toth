@@ -180,7 +180,11 @@
 
     <div class="field">
       <label for="entryDetails">Observações Técnicas / Psicossociais</label>
-      <textarea id="entryDetails" rows="5" placeholder="Descreva o atendimento, as articulações com a rede, os encaminhamentos e as observações importantes..."></textarea>
+      <div class="dictation-row">
+        <textarea id="entryDetails" rows="5" placeholder="Descreva o atendimento, as articulações com a rede, os encaminhamentos e as observações importantes..."></textarea>
+        <button type="button" id="dictateBtn" class="gps-btn dictate-btn" title="Ditar por voz" aria-label="Ditar por voz">🎙️</button>
+      </div>
+      <p class="dictate-status" id="dictateStatus"></p>
     </div>
 
     <div class="field-row">
