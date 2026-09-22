@@ -7,8 +7,8 @@
   "id": "./index.html",
   "display": "standalone",
   "categories": ["productivity", "utilities"],
-  "background_color": "#090d16",
-  "theme_color": "#0f1626",
+  "background_color": "#efe1c3",
+  "theme_color": "#efe1c3",
   "orientation": "portrait-primary",
   "lang": "pt-BR",
   "icons": [
