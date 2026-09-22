@@ -1,0 +1,68 @@
+/* Identidade visual Diário de Campo Toth
+   Carregado depois de css/style.css para aplicar a marca sem substituir o tema do app. */
+
+:root {
+  --toth-violet: #5d22d6;
+  --toth-blue: #0579f8;
+  --toth-cyan: #19d4ee;
+  --toth-ink: #090d16;
+  --toth-paper: #fffaf0;
+}
+
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  display: block;
+  background: url('../img/icone-psi-toth-192-fofinho.png') center / contain no-repeat;
+  border-radius: 14px;
+  filter: drop-shadow(0 8px 18px rgba(5, 121, 248, .22));
+}
+
+.auth-mark {
+  width: 112px;
+  height: 112px;
+  flex-basis: 112px;
+  margin: 0 auto 1rem;
+  border-radius: 28px;
+  filter: drop-shadow(0 16px 28px rgba(5, 121, 248, .28));
+}
+
+.auth-screen {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--toth-ink) url('../img/icone-toth-caderno-roxo-azul-fofinho.png') center / cover no-repeat;
+}
+
+.auth-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, rgba(9, 13, 22, .86), rgba(27, 10, 70, .56));
+}
+
+.auth-card {
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  background: rgba(9, 13, 22, .86);
+  border: 1px solid rgba(138, 185, 255, .28);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .34);
+}
+
+.brand-text strong {
+  background: linear-gradient(90deg, var(--toth-cyan), #fff, #bda3ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (max-width: 640px) {
+  .auth-card { margin: 1rem; }
+  .brand-mark { width: 40px; height: 40px; flex-basis: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
