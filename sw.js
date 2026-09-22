@@ -12,17 +12,17 @@
 //   propaga sozinha, só que sem atrasar a primeira exibição.
 // ============================================================
 
-const CACHE_NAME = 'caderno-psi-v19';
+const CACHE_NAME = 'caderno-psi-v24';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/style.css',
-  './css/branding-toth.css',
-  './js/app.js',
-  './img/icone-psi-toth-192-tech-mini.png',
-  './img/icone-psi-toth-512-tech-mini.png',
-  './img/icone-toth-caderno-roxo-azul-tech-mini.png'
+  './style.css',
+  './branding-toth.css',
+  './app.js',
+  './icone-psi-toth-192-tech-mini.png',
+  './icone-psi-toth-512-tech-mini.png',
+  './icone-toth-caderno-roxo-azul-tech-mini.png'
 ];
 
 const EXTENSOES_CODIGO = ['.html', '.css', '.js'];
