@@ -491,9 +491,21 @@ function renderizar() {
 // Imprimir um único registro (botão 🖨️ Imprimir no modal de edição)
 // ------------------------------------------------------------
 function imprimirRegistroAtual() {
-    const id = document.getElementById('entryId').value;
-    const reg = registros.find(r => r.id === id);
-    if (!reg) return;
+    // Lê os valores atuais do formulário (não o registro salvo em
+    // `registros`), para que qualquer edição feita na tela — mesmo sem
+    // ter clicado em "Salvar" ainda — apareça corretamente na impressão.
+    const reg = {
+        entryType: document.getElementById('entryType').value,
+        entryDate: document.getElementById('entryDate').value,
+        entryLocation: document.getElementById('entryLocation').value,
+        entryCode: document.getElementById('entryCode').value,
+        entrySummary: document.getElementById('entrySummary').value,
+        entryDetails: document.getElementById('entryDetails').value,
+        entryTags: document.getElementById('entryTags').value,
+        entryStatus: document.getElementById('entryStatus').value,
+        entryLat: document.getElementById('entryLat').value || null,
+        entryLng: document.getElementById('entryLng').value || null,
+    };
 
     const win = window.open('', '_blank');
     if (!win) {
@@ -502,14 +514,7 @@ function imprimirRegistroAtual() {
     }
 
     const html = `<html><head><meta charset="utf-8"><title>Registro — ${escapeHtml(reg.entrySummary || '')}</title><style>
-        @page { size: A4; margin: 18mm; }
-        * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; padding: 20px; color: #000; overflow-wrap: break-word; word-break: break-word; }
-        h1 { font-size: 18px; }
-        h2 { font-size: 15px; margin: 4px 0; }
-        .meta { color: #555; font-size: 11px; }
-        .campo { margin: 4px 0; }
-        .obs { white-space: pre-wrap; margin-top: 10px; line-height: 1.5; }
+        ${CSS_PAGINA_CADERNO}
     </style></head><body>
         <h1>Caderno de Campo — Paulo Xavier</h1>
         <p class="meta">${formatarData(reg.entryDate)} — ${escapeHtml(LABELS_TIPO[reg.entryType] || reg.entryType)} — ${escapeHtml(LABELS_STATUS[reg.entryStatus] || reg.entryStatus)}</p>
@@ -523,8 +528,59 @@ function imprimirRegistroAtual() {
 
     win.document.write(html);
     win.document.close();
-    setTimeout(() => { win.print(); win.close(); }, 500);
+
+    // Espera o conteúdo terminar de carregar antes de imprimir, em vez de
+    // um tempo fixo — que podia cortar observações longas em aparelhos
+    // mais lentos (mesmo ajuste já usado em exportarPDFViaImpressao).
+    const acionarImpressao = () => { win.print(); win.close(); };
+    if (win.document.readyState === 'complete') {
+        setTimeout(acionarImpressao, 150);
+    } else {
+        win.addEventListener('load', () => setTimeout(acionarImpressao, 150));
+    }
 }
+
+// ------------------------------------------------------------
+// CSS compartilhado: folha de caderno estilo Toth (pauta horizontal +
+// linha de margem dourada) usada nas páginas HTML impressas pelo
+// navegador (registro avulso e alternativa de PDF via impressão).
+// ------------------------------------------------------------
+const CSS_PAGINA_CADERNO = `
+    @page { size: A4; margin: 18mm; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+        font-family: Arial, sans-serif;
+        padding: 20px 20px 20px 34px;
+        color: #2b2013;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        background-color: #fdf6e3;
+        background-image:
+            linear-gradient(90deg, transparent 0 27px, rgba(201,154,58,.65) 27px, rgba(201,154,58,.65) 28.5px, transparent 28.5px),
+            repeating-linear-gradient(to bottom, transparent 0, transparent 25px, rgba(93,34,214,.16) 26px);
+        background-repeat: no-repeat, repeat;
+        background-position: 0 0, 0 6px;
+    }
+    h1 { font-size: 18px; color: #5d22d6; }
+    h2 { font-size: 15px; margin: 4px 0; }
+    .meta { color: #6b5c40; font-size: 11px; }
+    .campo { margin: 4px 0; }
+    .obs { white-space: pre-wrap; margin-top: 10px; line-height: 26px; }
+    .folha {
+        border: 1px solid rgba(201,154,58,.5);
+        border-radius: 6px;
+        padding: 16px 16px 16px 30px;
+        margin-bottom: 20px;
+        background: rgba(255,250,240,.5);
+        page-break-after: always;
+        page-break-inside: avoid;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        hyphens: auto;
+    }
+    .folha:last-child { page-break-after: auto; }
+`;
 
 // ------------------------------------------------------------
 // Exportações (continuam operando sobre os dados já sincronizados)
@@ -569,22 +625,27 @@ function exportarWord() {
 
     const ordenados = [...registros].sort((a, b) => new Date(b.entryDate) - new Date(a.entryDate));
 
+    // Cada registro vira uma "folha de caderno": fundo pergaminho com pauta
+    // horizontal (linhas repetidas) e uma linha de margem dourada à esquerda,
+    // no mesmo espírito visual do restante do app (identidade Toth).
+    const estiloPauta = "background-color:#fdf6e3; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 25px, rgba(93,34,214,.18) 26px);";
+
     let corpo = ordenados.map(reg => `
-        <div style="margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid #ccc; word-wrap:break-word;">
-            <p style="font-size:11pt; color:#555; margin:0;">${formatarData(reg.entryDate)} — ${escapeHtml(LABELS_TIPO[reg.entryType] || reg.entryType)} — ${escapeHtml(LABELS_STATUS[reg.entryStatus] || reg.entryStatus)}</p>
-            <h2 style="margin:4px 0; word-wrap:break-word;">${escapeHtml(reg.entrySummary)}</h2>
+        <div style="margin:0 0 22px; padding:14px 16px 16px 22px; border-left:3px solid #c99a3a; border-radius:2px; word-wrap:break-word; ${estiloPauta}">
+            <p style="font-size:11pt; color:#6b5c40; margin:0;">${formatarData(reg.entryDate)} — ${escapeHtml(LABELS_TIPO[reg.entryType] || reg.entryType)} — ${escapeHtml(LABELS_STATUS[reg.entryStatus] || reg.entryStatus)}</p>
+            <h2 style="margin:4px 0; word-wrap:break-word; color:#5d22d6;">${escapeHtml(reg.entrySummary)}</h2>
             <p style="margin:2px 0;"><strong>Local/Instituição:</strong> ${escapeHtml(reg.entryLocation || '—')}</p>
             <p style="margin:2px 0;"><strong>Código do caso/sujeito:</strong> ${escapeHtml(reg.entryCode || '—')}</p>
             <p style="margin:2px 0;"><strong>Tags:</strong> ${escapeHtml(reg.entryTags || '—')}</p>
             ${(reg.entryLat && reg.entryLng) ? `<p style="margin:2px 0; font-size:9pt;"><strong>Coordenadas:</strong> ${reg.entryLat}, ${reg.entryLng}</p>` : ''}
-            <p style="margin-top:8px; white-space:pre-wrap; word-wrap:break-word;">${escapeHtml(reg.entryDetails || '')}</p>
+            <p style="margin-top:8px; white-space:pre-wrap; word-wrap:break-word; line-height:26px;">${escapeHtml(reg.entryDetails || '')}</p>
         </div>
     `).join('');
 
     const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
         <head><meta charset="utf-8"><title>Caderno de Campo</title></head>
-        <body style="font-family: Calibri, Arial, sans-serif; word-wrap:break-word;">
-            <h1>Caderno de Campo — Paulo Xavier</h1>
+        <body style="font-family: Calibri, Arial, sans-serif; word-wrap:break-word; background-color:#efe1c3; padding:12px;">
+            <h1 style="color:#5d22d6;">Caderno de Campo — Paulo Xavier</h1>
             ${corpo}
         </body></html>`;
 
@@ -621,14 +682,36 @@ function exportarPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const margem = 18;
-    const larguraUtil = doc.internal.pageSize.getWidth() - margem * 2;
+    const larguraPagina = doc.internal.pageSize.getWidth();
+    const larguraUtil = larguraPagina - margem * 2;
     const alturaPagina = doc.internal.pageSize.getHeight();
     let y = margem;
 
+    // Desenha o fundo de "folha de caderno" na página atual: cor
+    // pergaminho, pauta horizontal e uma linha de margem dourada à
+    // esquerda — para o PDF ter a mesma identidade visual do app.
+    function desenharFundoCaderno() {
+        doc.setFillColor(253, 246, 227);
+        doc.rect(0, 0, larguraPagina, alturaPagina, 'F');
+
+        doc.setDrawColor(214, 200, 236);
+        doc.setLineWidth(0.1);
+        for (let linhaY = margem + 6; linhaY < alturaPagina - margem; linhaY += 6) {
+            doc.line(margem - 4, linhaY, larguraPagina - margem + 4, linhaY);
+        }
+
+        doc.setDrawColor(201, 154, 58);
+        doc.setLineWidth(0.5);
+        doc.line(margem - 6, margem - 6, margem - 6, alturaPagina - margem + 6);
+    }
+
     function novaPagina() {
         doc.addPage();
+        desenharFundoCaderno();
         y = margem;
     }
+
+    desenharFundoCaderno();
 
     // Escreve um bloco de texto, quebrando linhas pela largura da página e
     // pulando de página automaticamente quando o conteúdo não couber —
@@ -657,14 +740,14 @@ function exportarPDF() {
             `${formatarData(reg.entryDate)} — ${LABELS_TIPO[reg.entryType] || reg.entryType} — ${LABELS_STATUS[reg.entryStatus] || reg.entryStatus}`,
             { tamanho: 9, cor: [90, 90, 90], espacamentoAntes: 1, entrelinha: 4.5 }
         );
-        escreverParagrafo(reg.entrySummary || '', { tamanho: 12, estilo: 'bold', espacamentoAntes: 3, entrelinha: 5.5 });
-        escreverParagrafo(`Local/Instituição: ${reg.entryLocation || '—'}`, { espacamentoAntes: 3 });
-        escreverParagrafo(`Código do caso/sujeito: ${reg.entryCode || '—'}`);
-        escreverParagrafo(`Tags: ${reg.entryTags || '—'}`);
+        escreverParagrafo(reg.entrySummary || '', { tamanho: 12, estilo: 'bold', espacamentoAntes: 3, entrelinha: 6 });
+        escreverParagrafo(`Local/Instituição: ${reg.entryLocation || '—'}`, { espacamentoAntes: 3, entrelinha: 6 });
+        escreverParagrafo(`Código do caso/sujeito: ${reg.entryCode || '—'}`, { entrelinha: 6 });
+        escreverParagrafo(`Tags: ${reg.entryTags || '—'}`, { entrelinha: 6 });
         if (reg.entryLat && reg.entryLng) {
-            escreverParagrafo(`Coordenadas: ${reg.entryLat}, ${reg.entryLng}`, { tamanho: 9, cor: [90, 90, 90] });
+            escreverParagrafo(`Coordenadas: ${reg.entryLat}, ${reg.entryLng}`, { tamanho: 9, cor: [90, 90, 90], entrelinha: 6 });
         }
-        escreverParagrafo(reg.entryDetails || '', { espacamentoAntes: 4 });
+        escreverParagrafo(reg.entryDetails || '', { espacamentoAntes: 4, entrelinha: 6 });
     });
 
     doc.save(`caderno-campo-${dataLocalHoje()}.pdf`);
@@ -682,17 +765,7 @@ function exportarPDFViaImpressao() {
     const ordenados = [...registros].sort((a, b) => new Date(b.entryDate) - new Date(a.entryDate));
 
     let html = `<html><head><meta charset="utf-8"><style>
-        @page { size: A4; margin: 18mm; }
-        * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; width: 100%; max-width: 100%; }
-        body { font-family: Arial, sans-serif; padding: 20px; color: #000; overflow-wrap: break-word; word-break: break-word; }
-        .folha { border: 1px solid #000; padding: 16px; margin-bottom: 20px; width: 100%; max-width: 100%; page-break-after: always; page-break-inside: avoid; overflow-wrap: break-word; word-break: break-word; hyphens: auto; }
-        .folha:last-child { page-break-after: auto; }
-        h1 { font-size: 18px; overflow-wrap: break-word; }
-        h2 { font-size: 15px; margin: 4px 0; overflow-wrap: break-word; word-break: break-word; }
-        .meta { color: #555; font-size: 11px; }
-        .campo { margin: 4px 0; overflow-wrap: break-word; word-break: break-word; }
-        .obs { white-space: pre-wrap; margin-top: 10px; overflow-wrap: break-word; word-break: break-word; line-height: 1.5; }
+        ${CSS_PAGINA_CADERNO}
     </style></head><body>`;
 
     ordenados.forEach(reg => {
