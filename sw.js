@@ -12,7 +12,7 @@
 //   propaga sozinha, só que sem atrasar a primeira exibição.
 // ============================================================
 
-const CACHE_NAME = 'caderno-psi-v24';
+const CACHE_NAME = 'caderno-psi-v25';
 const ASSETS = [
   './',
   './index.html',
