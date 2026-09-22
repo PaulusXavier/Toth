@@ -14,17 +14,20 @@
   --toth-paper: #fffaf0;
   --toth-gold: #c99a3a;
 
-  /* Superfícies */
-  --bg: #090d16;
-  --panel: #11172a;
-  --panel-2: #161d34;
-  --border: rgba(138, 185, 255, .14);
-  --border-strong: rgba(138, 185, 255, .28);
+  /* Superfícies — tons de areia/pergaminho */
+  --sand: #efe1c3;
+  --sand-pale: #faf3e3;
+  --sand-deep: #e4d3ab;
+  --bg: var(--sand);
+  --panel: var(--sand-pale);
+  --panel-2: #f3e8cf;
+  --border: rgba(93, 34, 214, .16);
+  --border-strong: rgba(93, 34, 214, .36);
 
   /* Texto */
-  --text: #eef1fb;
-  --text-muted: #9aa4c4;
-  --text-faint: #6b7597;
+  --text: #2b2013;
+  --text-muted: #6b5c40;
+  --text-faint: #948564;
 
   /* Estado */
   --ok: #2fd47b;
@@ -106,7 +109,7 @@ select {
 
 textarea { resize: vertical; min-height: 90px; }
 
-a { color: var(--toth-cyan); }
+a { color: var(--toth-blue); }
 
 ::selection { background: var(--toth-violet); color: #fff; }
 
@@ -139,7 +142,7 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   padding: .6rem 1rem;
   font-weight: 500;
 }
-.ghost-btn:hover { background: rgba(255, 255, 255, .05); border-color: var(--toth-blue); }
+.ghost-btn:hover { background: rgba(93, 34, 214, .07); border-color: var(--toth-blue); }
 .ghost-btn.accent-word { border-color: rgba(5, 121, 248, .4); }
 .ghost-btn.accent-pdf { border-color: rgba(239, 90, 111, .4); }
 
@@ -155,7 +158,7 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   align-items: center;
   justify-content: center;
 }
-.icon-btn:hover { background: rgba(255, 255, 255, .08); color: var(--text); }
+.icon-btn:hover { background: rgba(93, 34, 214, .1); color: var(--text); }
 
 .auth-link {
   background: none;
@@ -165,7 +168,7 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   font-size: .85rem;
   align-self: center;
 }
-.auth-link:hover { color: var(--toth-cyan); }
+.auth-link:hover { color: var(--toth-blue); }
 
 /* ------------------------------------------------------------
    Tela de login / cadastro
@@ -323,7 +326,7 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   font-size: .88rem;
   border: 1px solid transparent;
 }
-.tab:hover { background: rgba(255, 255, 255, .04); color: var(--text); }
+.tab:hover { background: rgba(93, 34, 214, .06); color: var(--text); }
 .tab.active {
   background: rgba(5, 121, 248, .12);
   border-color: rgba(5, 121, 248, .35);
@@ -333,7 +336,7 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .tab-count {
   font-family: var(--font-mono);
   font-size: .75rem;
-  background: rgba(255, 255, 255, .08);
+  background: rgba(93, 34, 214, .1);
   padding: .1rem .5rem;
   border-radius: 999px;
   min-width: 1.6em;
@@ -369,9 +372,9 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .account-logout:hover { background: rgba(239, 90, 111, .1); }
 
 .sync-status { font-size: .78rem; margin: 0; color: var(--text-muted); }
-.sync-status.sync-ok { color: var(--ok); }
-.sync-status.sync-offline { color: var(--warn); }
-.sync-status.sync-erro { color: var(--err); }
+.sync-status.sync-ok { color: #177f47; }
+.sync-status.sync-offline { color: #8c691d; }
+.sync-status.sync-erro { color: #c14254; }
 
 .export-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
 .export-actions .ghost-btn { padding: .55rem .5rem; font-size: .8rem; text-align: center; }
@@ -431,8 +434,8 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .empty-stamp {
   font-family: var(--font-display);
   font-size: 2.6rem;
-  color: var(--toth-cyan);
-  opacity: .55;
+  color: var(--toth-violet);
+  opacity: .6;
 }
 .empty-state h2 { font-size: 1.25rem; color: var(--text); }
 .empty-state p { max-width: 420px; }
@@ -472,10 +475,10 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   border-radius: 999px;
   white-space: nowrap;
 }
-.entry-type-atendimento { background: rgba(5, 121, 248, .16); color: #6fb3ff; }
-.entry-type-visita { background: rgba(93, 34, 214, .2); color: #b79bff; }
-.entry-type-visitatecnica { background: rgba(25, 212, 238, .16); color: var(--toth-cyan); }
-.entry-type-grupo { background: rgba(201, 154, 58, .2); color: #e0b968; }
+.entry-type-atendimento { background: rgba(5, 121, 248, .14); color: #0159d1; }
+.entry-type-visita { background: rgba(93, 34, 214, .14); color: #5d22d6; }
+.entry-type-visitatecnica { background: rgba(25, 212, 238, .18); color: #066f7e; }
+.entry-type-grupo { background: rgba(201, 154, 58, .2); color: #825c0e; }
 
 .entry-date { font-family: var(--font-mono); font-size: .78rem; color: var(--text-faint); }
 
@@ -493,8 +496,8 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .entry-status-flag {
   font-size: .72rem;
   font-weight: 600;
-  color: var(--warn);
-  background: rgba(232, 177, 58, .12);
+  color: #87600e;
+  background: rgba(232, 177, 58, .18);
   padding: .2rem .55rem;
   border-radius: 999px;
   width: fit-content;
@@ -569,7 +572,7 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   max-width: 90vw;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
-.toast.error { border-color: rgba(239, 90, 111, .5); color: #ffb3bd; }
+.toast.error { border-color: rgba(239, 90, 111, .5); color: #b3283f; }
 
 /* ------------------------------------------------------------
    Responsivo
