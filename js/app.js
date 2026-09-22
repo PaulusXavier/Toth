@@ -11,13 +11,13 @@
 // Console: https://console.firebase.google.com
 // Projeto > Configurações do projeto > "Seus apps" > Configuração do SDK
 const firebaseConfig = {
-  apiKey: "AIzaSyA7poux4vbiIymLOH0x50V7BLGHDAFCIjM",
-  authDomain: "caderno-de-campo-px.firebaseapp.com",
-  projectId: "caderno-de-campo-px",
-  storageBucket: "caderno-de-campo-px.firebasestorage.app",
-  messagingSenderId: "1098711611929",
-  appId: "1:1098711611929:web:27ec24d655943ee0894888",
-  measurementId: "G-2WKZ2GJQ2V"
+  apiKey: "AIzaSyAkmsw0v0D6HDG4akeW7ZIhqPnCo5SssPY",
+  authDomain: "toth-c35c3.firebaseapp.com",
+  projectId: "toth-c35c3",
+  storageBucket: "toth-c35c3.firebasestorage.app",
+  messagingSenderId: "326262197372",
+  appId: "1:326262197372:web:92b09e138bef5354e38df9",
+  measurementId: "G-85LVLPZYFQ"
 };
 
 firebase.initializeApp(firebaseConfig);
