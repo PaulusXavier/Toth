@@ -685,10 +685,127 @@ function importarBackup(file) {
 }
 
 // ------------------------------------------------------------
+// Ditado por voz — transcreve a fala em tempo real direto no
+// campo de Observações Técnicas/Psicossociais (Web Speech API).
+// Não grava nem guarda o áudio: tudo vira texto na hora.
+// ------------------------------------------------------------
+function configurarDitadoPorVoz() {
+    const botao = document.getElementById('dictateBtn');
+    const statusEl = document.getElementById('dictateStatus');
+    const textarea = document.getElementById('entryDetails');
+    if (!botao || !textarea) return;
+
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionAPI) {
+        botao.disabled = true;
+        botao.title = 'Ditado por voz não é compatível com este navegador (use o Chrome no Android ou no computador).';
+        statusEl.textContent = 'Ditado por voz indisponível neste navegador.';
+        return;
+    }
+
+    const reconhecimento = new SpeechRecognitionAPI();
+    reconhecimento.lang = 'pt-BR';
+    reconhecimento.continuous = true;
+    reconhecimento.interimResults = true;
+
+    let gravando = false;
+    let paradaManual = false;
+    let textoBase = '';
+    let transcricaoFinal = '';
+
+    function juntarTexto(base, adicional) {
+        if (!adicional) return base;
+        if (!base) return adicional;
+        return /[\s\n]$/.test(base) ? base + adicional : base + ' ' + adicional;
+    }
+
+    function ligarUI() {
+        botao.classList.add('recording');
+        botao.textContent = '⏹️';
+        botao.title = 'Parar ditado';
+        statusEl.textContent = '🔴 Gravando... fale agora';
+        statusEl.classList.add('active');
+    }
+
+    function desligarUI(mensagem) {
+        botao.classList.remove('recording');
+        botao.textContent = '🎙️';
+        botao.title = 'Ditar por voz';
+        statusEl.classList.remove('active');
+        statusEl.textContent = mensagem || '';
+    }
+
+    botao.addEventListener('click', () => {
+        if (gravando) {
+            paradaManual = true;
+            reconhecimento.stop();
+            return;
+        }
+        try {
+            textoBase = textarea.value;
+            transcricaoFinal = '';
+            paradaManual = false;
+            reconhecimento.start();
+        } catch (err) {
+            console.error('Erro ao iniciar o ditado:', err);
+        }
+    });
+
+    reconhecimento.onstart = () => {
+        gravando = true;
+        ligarUI();
+    };
+
+    reconhecimento.onresult = (event) => {
+        let interino = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const trecho = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+                transcricaoFinal = juntarTexto(transcricaoFinal, trecho);
+            } else {
+                interino += trecho;
+            }
+        }
+        textarea.value = juntarTexto(juntarTexto(textoBase, transcricaoFinal), interino);
+    };
+
+    reconhecimento.onerror = (event) => {
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            desligarUI('Permissão de microfone negada. Habilite o acesso ao microfone nas configurações do navegador.');
+            paradaManual = true;
+        } else if (event.error === 'no-speech') {
+            // Silêncio momentâneo: deixa o próprio onend decidir se reinicia.
+        } else if (event.error === 'network') {
+            desligarUI('Sem conexão para transcrever agora. Verifique a internet e tente novamente.');
+            paradaManual = true;
+        } else {
+            console.warn('Erro no ditado por voz:', event.error);
+        }
+    };
+
+    reconhecimento.onend = () => {
+        gravando = false;
+        // O reconhecimento do navegador se encerra sozinho após um tempo
+        // ou um trecho de silêncio; se o usuário não pediu para parar,
+        // reinicia automaticamente para continuar ditando sem esforço.
+        if (!paradaManual) {
+            textoBase = textarea.value;
+            transcricaoFinal = '';
+            try { reconhecimento.start(); } catch (err) { desligarUI(''); }
+        } else {
+            desligarUI('Transcrição concluída.');
+            setTimeout(() => { if (!gravando) statusEl.textContent = ''; }, 3000);
+        }
+    };
+}
+
+// ------------------------------------------------------------
 // Inicialização de eventos
 // ------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     configurarFormAuth();
+    configurarDitadoPorVoz();
     renderizar();
 
     document.getElementById('logoutBtn').addEventListener('click', sair);
