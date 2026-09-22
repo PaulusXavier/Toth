@@ -221,6 +221,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-analytics-compat.js"></script>
 
+<!-- jsPDF — gera o PDF de verdade no navegador (exportarPDF em app.js).
+     Sem esta biblioteca, window.jspdf nunca existe e a exportação em PDF
+     cairia sempre no método alternativo de impressão. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
