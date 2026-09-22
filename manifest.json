@@ -13,13 +13,13 @@
   "lang": "pt-BR",
   "icons": [
     {
-      "src": "img/icone-psi-toth-192-tech-mini.png",
+      "src": "icone-psi-toth-192-tech-mini.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "img/icone-psi-toth-512-tech-mini.png",
+      "src": "icone-psi-toth-512-tech-mini.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
