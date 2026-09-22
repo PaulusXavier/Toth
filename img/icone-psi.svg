@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<defs>
+<radialGradient id="bg" cx="50%" cy="35%" r="85%">
+<stop offset="0%" stop-color="#ffffff"/>
+<stop offset="35%" stop-color="#8BE9FF"/>
+<stop offset="65%" stop-color="#6C63FF"/>
+<stop offset="100%" stop-color="#3B0CA3"/>
+</radialGradient>
+<linearGradient id="book" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0%" stop-color="#123A68"/><stop offset="100%" stop-color="#081C3A"/>
+</linearGradient>
+<linearGradient id="psi" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0%" stop-color="#34D399"/><stop offset="50%" stop-color="#38BDF8"/><stop offset="100%" stop-color="#A855F7"/>
+</linearGradient>
+<filter id="s"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-opacity=".3"/></filter>
+</defs>
+<rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+<g opacity=".35">
+<circle cx="170" cy="860" r="180" fill="#FF5EA8"/>
+<circle cx="860" cy="180" r="180" fill="#FFD54A"/>
+<circle cx="760" cy="800" r="150" fill="#00E5FF"/>
+</g>
+<path d="M0 790C180 650 350 890 520 770S850 760 1024 700V1024H0Z" fill="#fff3"/>
+<g filter="url(#s)" transform="rotate(-8 512 512)">
+<rect x="270" y="170" width="500" height="670" rx="40" fill="url(#book)"/>
+<rect x="270" y="170" width="36" height="670" rx="18" fill="#061326"/>
+<g stroke="#E5F6FF" fill="none" stroke-width="5"><circle cx="305" cy="220" r="12"/><circle cx="305" cy="272" r="12"/><circle cx="305" cy="324" r="12"/><circle cx="305" cy="376" r="12"/><circle cx="305" cy="428" r="12"/><circle cx="305" cy="480" r="12"/><circle cx="305" cy="532" r="12"/><circle cx="305" cy="584" r="12"/><circle cx="305" cy="636" r="12"/><circle cx="305" cy="688" r="12"/></g>
+<text x="520" y="390" text-anchor="middle" font-size="220" fill="url(#psi)" font-family="serif">Ψ</text>
+<text x="520" y="560" text-anchor="middle" font-size="68" font-family="Arial" font-weight="700" fill="white">DIÁRIO</text>
+<text x="520" y="635" text-anchor="middle" font-size="52" font-family="Arial" font-weight="700" fill="white">DE CAMPO</text>
+<text x="520" y="690" text-anchor="middle" font-size="34" font-family="Arial" fill="#67E8F9">PSICÓLOGO</text>
+<rect x="754" y="270" width="24" height="70" rx="8" fill="#22D3EE"/>
+<rect x="754" y="360" width="24" height="70" rx="8" fill="#FB923C"/>
+<rect x="754" y="450" width="24" height="70" rx="8" fill="#FACC15"/>
+<rect x="754" y="540" width="24" height="70" rx="8" fill="#A855F7"/>
+</g>
+</svg>
