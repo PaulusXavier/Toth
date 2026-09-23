@@ -700,6 +700,15 @@ const CSS_PAGINA_CADERNO = `
     @page { size: A4; margin: 18mm; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
+    html, body, .folha {
+        /* Sem isso, a maioria dos navegadores some com cores/imagens de
+           fundo ao imprimir (só imprimem o texto), então a folha pautada
+           e a margem dourada podiam desaparecer justamente na 2ª folha
+           em diante. Força o fundo a ser sempre impresso. */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        color-adjust: exact;
+    }
     body {
         font-family: Arial, sans-serif;
         padding: 20px 20px 20px 34px;
@@ -713,24 +722,29 @@ const CSS_PAGINA_CADERNO = `
         background-repeat: no-repeat, repeat;
         background-position: 0 0, 0 6px;
     }
-    h1 { font-size: 18px; color: #5d22d6; }
-    h2 { font-size: 15px; margin: 4px 0; }
-    .meta { color: #6b5c40; font-size: 11px; }
-    .campo { margin: 4px 0; }
-    .obs { white-space: pre-wrap; margin-top: 10px; line-height: 26px; }
+    h1 { font-size: 18px; color: #5d22d6; page-break-after: avoid; }
+    h2 { font-size: 15px; margin: 4px 0; page-break-after: avoid; }
+    .meta { color: #6b5c40; font-size: 11px; page-break-after: avoid; }
+    .campo { margin: 4px 0; page-break-after: avoid; }
+    .obs { white-space: pre-wrap; margin-top: 10px; line-height: 26px; orphans: 3; widows: 3; }
+    /* Um registro pode ter uma observação longa e precisar de mais de uma
+       folha A4 — antes "page-break-inside: avoid" forçava o navegador a
+       tentar manter cada registro inteiro numa única folha mesmo quando o
+       texto não cabia, o que cortava/bugava o conteúdo que sobrava. Agora
+       cada registro só começa numa folha nova (page-break-before) e, dali
+       em diante, quebra livremente por quantas folhas forem necessárias. */
     .folha {
-        border: 1px solid rgba(201,154,58,.5);
-        border-radius: 6px;
-        padding: 16px 16px 16px 30px;
-        margin-bottom: 20px;
-        background: rgba(255,250,240,.5);
-        page-break-after: always;
-        page-break-inside: avoid;
+        padding: 0 0 18px;
+        margin-bottom: 18px;
+        border-bottom: 1px dashed rgba(201,154,58,.6);
+        page-break-before: always;
+        page-break-inside: auto;
         overflow-wrap: break-word;
         word-break: break-word;
         hyphens: auto;
     }
-    .folha:last-child { page-break-after: auto; }
+    .folha:first-child { page-break-before: avoid; }
+    .folha:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 `;
 
 // Bloco de HTML com o conteúdo de um único registro, usado tanto pela
@@ -799,8 +813,8 @@ function exportarWord() {
     // no mesmo espírito visual do restante do app (identidade Toth).
     const estiloPauta = "background-color:#fdf6e3; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 25px, rgba(93,34,214,.18) 26px);";
 
-    let corpo = ordenados.map(reg => `
-        <div style="margin:0 0 22px; padding:14px 16px 16px 22px; border-left:3px solid #c99a3a; border-radius:2px; word-wrap:break-word; ${estiloPauta}">
+    let corpo = ordenados.map((reg, indice) => `
+        <div style="margin:0 0 22px; padding:14px 16px 16px 22px; border-left:3px solid #c99a3a; border-radius:2px; word-wrap:break-word; ${indice > 0 ? 'page-break-before:always; mso-page-break-before:always;' : ''} ${estiloPauta}">
             <p style="font-size:11pt; color:#6b5c40; margin:0;">${formatarData(reg.entryDate)} — ${escapeHtml(LABELS_TIPO[reg.entryType] || reg.entryType)} — ${escapeHtml(LABELS_STATUS[reg.entryStatus] || reg.entryStatus)}</p>
             <h2 style="margin:4px 0; word-wrap:break-word; color:#5d22d6;">${escapeHtml(reg.entrySummary)}</h2>
             <p style="margin:2px 0;"><strong>Local/Instituição:</strong> ${escapeHtml(reg.entryLocation || '—')}</p>
@@ -846,6 +860,18 @@ function exportarPDF() {
         return exportarPDFViaImpressao();
     }
 
+    try {
+        gerarPDFComJsPDF();
+    } catch (err) {
+        // Se algo inesperado der errado gerando o PDF (registro com dado
+        // fora do padrão, biblioteca instável etc.), cai para o método de
+        // impressão em vez de deixar o botão simplesmente não fazer nada.
+        console.error('Erro ao gerar PDF com jsPDF — usando o método de impressão como alternativa:', err);
+        exportarPDFViaImpressao();
+    }
+}
+
+function gerarPDFComJsPDF() {
     const ordenados = [...registros].sort((a, b) => new Date(b.entryDate) - new Date(a.entryDate));
 
     const { jsPDF } = window.jspdf;
