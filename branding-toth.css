@@ -1,10 +1,14 @@
-/* Identidade visual Diário de Campo Toth — v2 (fundo tech / mesh gradient)
+/* Identidade visual Diário de Campo Toth — v3 (papiro egípcio)
    Carregado depois de style.css para aplicar a marca por cima do tema base.
-   Esta versão troca o fundo de "papiro com hieróglifos" por um fundo
-   tecnológico moderno (mesh gradient + grade de pontos), e redefine as
-   variáveis de superfície/texto de style.css para um tema escuro — os
-   componentes (botões, abas, badges, inputs) continuam usando as mesmas
-   variáveis (--bg, --panel, --text etc.), então se adaptam automaticamente. */
+   Esta versão substitui o fundo "tech / mesh gradient" por um fundo de
+   papiro com motivos hieroglíficos, retomando a estética egípcia da marca
+   (o ícone já traz Toth erguendo os braços, com disco solar e lua) — mas
+   com textura mais rica: fibras de papiro, leves manchas de "envelhecimento"
+   e um padrão sutil de símbolos (ankh, olho estilizado, disco solar, água)
+   repetido em baixíssima opacidade atrás de todo o app. Os componentes
+   (botões, abas, badges, inputs) continuam usando as mesmas variáveis
+   (--bg, --panel, --text etc.) definidas em style.css, então herdam o
+   visual automaticamente. */
 
 :root {
   --toth-violet: #5d22d6;
@@ -12,161 +16,108 @@
   --toth-cyan: #19d4ee;
   --toth-ink: #090d16;
   --toth-gold: #c99a3a;
+  --toth-gold-deep: #8a6a2e;
+  --toth-lapis: #1c3f8f;
+  --toth-turquoise: #0c8f86;
+  --toth-carnelian: #b1442e;
 
-  /* -------- Tema escuro / tecnológico -------------------------------
-     Substitui as variáveis de superfície e texto de style.css (mesma
-     especificidade "*:root*", vence por vir depois no arquivo). Como
-     quase todo o CSS base já usa var(--bg), var(--panel), var(--text)
-     etc., o app inteiro migra para o tema escuro sem precisar reescrever
-     cada componente. */
-  --bg: #0c0930;
-  --panel: rgba(21, 17, 48, .6);
-  --panel-2: rgba(255, 255, 255, .06);
-  --border: rgba(255, 255, 255, .14);
-  --border-strong: rgba(255, 255, 255, .3);
-
-  --text: #eef1fb;
-  --text-muted: #aab2d8;
-  --text-faint: #7d84ab;
-
-  --ok: #35d488;
-  --warn: #f0c15a;
-  --err: #ff6b81;
-
-  --shadow: 0 20px 50px rgba(2, 2, 20, .55);
-
-  /* -------- Fundo "mesh gradient" tecnológico ------------------------
-     Camadas, da mais próxima pra mais longe:
-     1) grade fina de pontos (textura sutil)
-     2) manchas de cor suaves (violeta / ciano / azul / roxo) tipo aurora
-     3) gradiente diagonal escuro de base (índigo -> azul) */
-  --tech-dot-grid: radial-gradient(rgba(255, 255, 255, .07) 1px, transparent 1.3px);
-  --tech-mesh:
-    radial-gradient(45% 45% at 85% 18%, rgba(25, 212, 238, .38), transparent 62%),
-    radial-gradient(48% 48% at 14% 16%, rgba(93, 34, 214, .40), transparent 62%),
-    radial-gradient(46% 46% at 22% 92%, rgba(5, 121, 248, .38), transparent 62%),
-    radial-gradient(42% 42% at 82% 88%, rgba(130, 40, 200, .30), transparent 62%);
-  --tech-base: linear-gradient(135deg, #0a0726 0%, #120c3c 32%, #142657 58%, #0c6aa8 100%);
+  --shadow: 0 16px 38px rgba(74, 52, 16, .22);
 }
 
 /* ------------------------------------------------------------
-   Fundo geral do app: mesh gradient tecnológico + grade de pontos,
-   aplicado atrás de tudo (sidebar e área principal ficam "flutuando"
-   como painéis de vidro por cima).
+   Padrão hieroglífico (SVG embutido, tile 200x200): ankh, olho
+   estilizado, disco solar com raios e linha de água — traçados
+   simples em ocre dourado, com opacidade baixa para funcionar
+   como textura, não como ilustração em destaque.
    ------------------------------------------------------------ */
-body {
-  background-color: var(--bg);
-  background-image: var(--tech-dot-grid), var(--tech-mesh), var(--tech-base);
-  background-repeat: repeat, no-repeat, no-repeat;
-  background-position: 0 0, 0 0, 0 0;
-  background-size: 26px 26px, 100% 100%, 100% 100%;
-  background-attachment: fixed;
-}
-
-.auth-screen {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  min-height: 100vh;
-  background-color: var(--bg);
-  background-image: var(--tech-dot-grid), var(--tech-mesh), var(--tech-base);
-  background-repeat: repeat, no-repeat, no-repeat;
-  background-position: 0 0, 0 0, 0 0;
-  background-size: 26px 26px, 100% 100%, 100% 100%;
+:root {
+  --toth-hieroglyphs: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><g fill='none' stroke='%238a6a2e' stroke-width='2.4' stroke-linecap='round' opacity='.16'><g transform='translate(24,26)'><circle cx='9' cy='9' r='9'/><line x1='9' y1='18' x2='9' y2='46'/><line x1='-6' y1='30' x2='24' y2='30'/></g><g transform='translate(140,20)'><path d='M0 14 Q18 -6 36 14 Q18 28 0 14 Z'/><circle cx='18' cy='14' r='5' fill='%238a6a2e' stroke='none'/><path d='M13 22 Q10 32 15 34'/></g><g transform='translate(30,140)'><circle cx='16' cy='16' r='10'/><line x1='16' y1='-4' x2='16' y2='4'/><line x1='16' y1='28' x2='16' y2='36'/><line x1='-4' y1='16' x2='4' y2='16'/><line x1='28' y1='16' x2='36' y2='16'/><line x1='2' y1='2' x2='7' y2='7'/><line x1='25' y1='25' x2='30' y2='30'/><line x1='30' y1='2' x2='25' y2='7'/><line x1='7' y1='25' x2='2' y2='30'/></g><g transform='translate(128,150)'><path d='M0 4 Q10 -4 20 4 Q30 -4 40 4'/><path d='M0 14 Q10 6 20 14 Q30 6 40 14'/></g></g></svg>");
 }
 
 /* ------------------------------------------------------------
-   Painéis de vidro: sidebar, cartão de login, cartões de registro
-   e modal ganham um efeito "glass" translúcido por cima do fundo,
-   no lugar da textura de caderno/papiro da versão anterior.
+   Fundo geral: papiro (fibras + leves manchas) com o padrão
+   hieroglífico por cima, repetido em mosaico.
+   ------------------------------------------------------------ */
+body,
+.auth-screen {
+  background-color: var(--sand);
+  background-image:
+    var(--toth-hieroglyphs),
+    repeating-linear-gradient(90deg, rgba(139, 106, 46, .05) 0px, rgba(139, 106, 46, .05) 1px, transparent 1px, transparent 7px),
+    repeating-linear-gradient(0deg, rgba(139, 106, 46, .035) 0px, rgba(139, 106, 46, .035) 1px, transparent 1px, transparent 9px),
+    radial-gradient(60% 50% at 12% 8%, rgba(201, 154, 58, .16), transparent 65%),
+    radial-gradient(55% 45% at 90% 95%, rgba(93, 34, 214, .07), transparent 70%),
+    linear-gradient(160deg, var(--sand-pale) 0%, var(--sand) 55%, var(--sand-deep) 100%);
+  background-repeat: repeat, repeat, repeat, no-repeat, no-repeat, no-repeat;
+  background-size: 200px 200px, auto, auto, 100% 100%, 100% 100%, 100% 100%;
+}
+
+/* ------------------------------------------------------------
+   Painéis: sidebar, cartão de login, cartões de registro e modal
+   viram "placas de papiro" levemente translúcidas sobre o fundo,
+   com um friso dourado no topo lembrando uma cartela egípcia.
    ------------------------------------------------------------ */
 .sidebar,
 .auth-card,
 .modal,
 .entry-card,
 .toast {
-  background-color: var(--panel);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-.sidebar { border-right: 1px solid var(--border); }
-
-.auth-card,
-.modal,
-.entry-card {
+  background-color: rgba(250, 243, 227, .88);
   border: 1px solid var(--border);
   position: relative;
 }
 
-/* linha de brilho sutil no topo dos cartões, reforça a sensação de vidro */
+.sidebar { border-right: 1px solid var(--border-strong); }
+
+.auth-card,
+.modal,
+.entry-card {
+  border: 1px solid var(--border-strong);
+}
+
+/* friso dourado (zigue-zague estilo guilloché egípcio) no topo dos
+   cartões principais, no lugar do brilho "vidro" da versão tech */
 .auth-card::before,
 .modal::before,
 .entry-card::before {
   content: '';
   position: absolute;
   inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .5), transparent);
+  height: 5px;
+  background:
+    linear-gradient(135deg, transparent 50%, var(--toth-gold) 50%) 0 0 / 10px 10px,
+    linear-gradient(-135deg, transparent 50%, var(--toth-gold) 50%) 0 0 / 10px 10px;
+  background-repeat: repeat-x;
   border-radius: inherit;
+  opacity: .55;
   pointer-events: none;
 }
 
-.entry-card:hover { border-color: rgba(5, 121, 248, .5); }
+.entry-card:hover { border-color: var(--toth-gold); }
 
-.modal-backdrop { background: rgba(3, 2, 16, .78); }
+.modal-backdrop { background: rgba(43, 32, 19, .68); }
 
 /* ------------------------------------------------------------
-   Modal de registro = "folha de caderno"
-   O formulário de novo registro/edição passa a usar o mesmo visual
-   das exportações (PDF/Word) e da impressão: fundo pergaminho, pauta
-   horizontal e margem dourada — em vez do vidro escuro tecnológico
-   usado no resto do app. Como quase todo componente do formulário
-   (rótulos, títulos, inputs, botões) já usa var(--text), var(--border)
-   etc., redefinir essas variáveis só dentro de .modal é suficiente
-   para o formulário inteiro migrar para o tema "papel".
+   Modal de registro = "folha de papiro pautada", com margem
+   dourada vertical lembrando um rolo antigo.
    ------------------------------------------------------------ */
 .modal {
-  --text: #2b2013;
-  --text-muted: #6b5c40;
-  --text-faint: #948564;
-  --border: rgba(93, 34, 214, .18);
-  --border-strong: rgba(93, 34, 214, .38);
-  --panel-2: rgba(255, 255, 255, .55);
-
   background-color: #fdf6e3;
-  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 25px, rgba(93, 34, 214, .16) 26px);
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 25px, rgba(138, 106, 46, .16) 26px);
   background-position: 0 6px;
   background-repeat: repeat;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border: 1px solid rgba(201, 154, 58, .5);
   padding-left: 2.6rem;
 }
 
-/* Troca o brilho de vidro (herdado da regra compartilhada acima) por
-   uma linha de margem dourada vertical, como numa folha de caderno. */
 .modal::before {
   inset: .9rem auto .9rem 1.9rem;
   width: 1.5px;
   height: auto;
-  background: linear-gradient(180deg, transparent, rgba(201, 154, 58, .75) 8%, rgba(201, 154, 58, .75) 92%, transparent);
+  background: linear-gradient(180deg, transparent, rgba(201, 154, 58, .85) 8%, rgba(201, 154, 58, .85) 92%, transparent);
+  opacity: 1;
 }
 
 .modal-head h2 { color: var(--toth-violet); }
-
-.modal input,
-.modal select,
-.modal textarea {
-  background: var(--panel-2);
-  border-color: var(--border);
-}
-.modal input:focus,
-.modal select:focus,
-.modal textarea:focus {
-  background: rgba(255, 255, 255, .85);
-  border-color: var(--toth-blue);
-}
 
 @media (max-width: 640px) {
   .modal { padding-left: 2rem; }
@@ -174,7 +125,7 @@ body {
 }
 
 /* ------------------------------------------------------------
-   Marca (ícone "glifo flutuante")
+   Marca (ícone de Toth)
    ------------------------------------------------------------ */
 .brand-mark {
   width: 48px;
@@ -183,7 +134,7 @@ body {
   display: block;
   background: url('icone-psi-toth-192-tech-mini.png') center / contain no-repeat;
   border-radius: 14px;
-  filter: drop-shadow(0 8px 18px rgba(5, 121, 248, .35));
+  filter: drop-shadow(0 6px 14px rgba(138, 106, 46, .4));
 }
 
 .auth-mark {
@@ -192,11 +143,11 @@ body {
   flex-basis: 112px;
   margin: 0 auto 1rem;
   border-radius: 28px;
-  filter: drop-shadow(0 16px 32px rgba(25, 212, 238, .35));
+  filter: drop-shadow(0 12px 26px rgba(138, 106, 46, .4));
 }
 
 .brand-text strong {
-  background: linear-gradient(90deg, var(--toth-cyan), var(--toth-blue), var(--toth-violet));
+  background: linear-gradient(90deg, var(--toth-carnelian), var(--toth-gold), var(--toth-violet));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -208,40 +159,45 @@ body {
 }
 
 /* ------------------------------------------------------------
-   Badges e status — recalibrados para contraste em fundo escuro
-   (as cores originais de style.css foram pensadas para painel claro)
+   Badges e status — paleta egípcia (lápis-lazúli, turquesa,
+   cornalina e ouro) no lugar dos tons neon da versão tech.
    ------------------------------------------------------------ */
-.entry-type-atendimento { background: rgba(5, 121, 248, .22); color: #8cc4ff; }
-.entry-type-visita { background: rgba(93, 34, 214, .3); color: #cdb0ff; }
-.entry-type-visitatecnica { background: rgba(25, 212, 238, .22); color: #8fe9f5; }
-.entry-type-grupo { background: rgba(201, 154, 58, .26); color: #f2cb7c; }
+.entry-type-atendimento { background: rgba(28, 63, 143, .14); color: var(--toth-lapis); }
+.entry-type-visita { background: rgba(93, 34, 214, .14); color: var(--toth-violet); }
+.entry-type-visitatecnica { background: rgba(12, 143, 134, .16); color: var(--toth-turquoise); }
+.entry-type-grupo { background: rgba(201, 154, 58, .2); color: var(--toth-gold-deep); }
 
 .entry-status-flag {
-  color: #f5cd7e;
-  background: rgba(232, 177, 58, .22);
+  color: var(--toth-carnelian);
+  background: rgba(177, 68, 46, .14);
 }
 
-.sync-status.sync-ok { color: #4bdf9a; }
-.sync-status.sync-offline { color: #e8c26c; }
-.sync-status.sync-erro { color: #ff8194; }
+.sync-status.sync-ok { color: #1f7a4d; }
+.sync-status.sync-offline { color: var(--toth-gold-deep); }
+.sync-status.sync-erro { color: var(--toth-carnelian); }
 
 /* ------------------------------------------------------------
    Selo do estado vazio
    ------------------------------------------------------------ */
 .empty-stamp {
-  color: var(--toth-cyan);
-  opacity: .75;
+  color: var(--toth-violet);
+  opacity: .7;
 }
 .empty-stamp.spinning {
   display: inline-block;
   animation: toth-spin 1.4s linear infinite;
-  opacity: .75;
+  opacity: .7;
 }
 
 @keyframes toth-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ------------------------------------------------------------
+   Barra de rolagem em tom dourado, combinando com o papiro
+   ------------------------------------------------------------ */
+::-webkit-scrollbar-thumb { background: rgba(138, 106, 46, .45); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
