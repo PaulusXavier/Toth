@@ -30,12 +30,14 @@ body,
 .sidebar {
   background-color: var(--sand, #efe1c3);
   background-image:
+    radial-gradient(900px circle at 12% -8%, rgba(93, 34, 214, .10), transparent 55%),
+    radial-gradient(800px circle at 105% 105%, rgba(5, 121, 248, .09), transparent 55%),
     repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--toth-line-h) - 1px), var(--toth-rule) var(--toth-line-h)),
     linear-gradient(180deg, rgba(255, 250, 240, .55), rgba(239, 225, 195, .85)),
     var(--tech-hiero-tile);
-  background-repeat: repeat, no-repeat, repeat;
-  background-position: 0 4px, 0 0, center;
-  background-size: 100% var(--toth-line-h), auto, 220px;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat, repeat;
+  background-position: 0 0, 0 0, 0 4px, 0 0, center;
+  background-size: 100% 100%, 100% 100%, 100% var(--toth-line-h), auto, 220px;
 }
 
 /* "Folhas" individuais: cartão de login, cada registro e o modal de
@@ -89,12 +91,15 @@ body,
   isolation: isolate;
   background-color: var(--sand, #efe1c3);
   background-image:
+    radial-gradient(1100px circle at 12% -12%, rgba(93, 34, 214, .22), transparent 58%),
+    radial-gradient(1000px circle at 108% 112%, rgba(5, 121, 248, .20), transparent 55%),
+    radial-gradient(700px circle at 90% -6%, rgba(25, 212, 238, .14), transparent 50%),
     repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--toth-line-h) - 1px), var(--toth-rule) var(--toth-line-h)),
     linear-gradient(135deg, rgba(255, 250, 240, .65), rgba(228, 211, 171, .6)),
     var(--tech-hiero-tile);
-  background-repeat: repeat, no-repeat, repeat;
-  background-position: 0 4px, 0 0, center;
-  background-size: 100% var(--toth-line-h), auto, 200px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, no-repeat, repeat;
+  background-position: 0 0, 0 0, 0 0, 0 4px, 0 0, center;
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% var(--toth-line-h), auto, 200px;
 }
 
 .auth-screen::before {
