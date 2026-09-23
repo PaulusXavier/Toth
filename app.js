@@ -42,6 +42,12 @@ let unsubscribeSnapshot = null;
 let carregandoRegistros = false;
 let modoAuth = 'entrar'; // 'entrar' | 'cadastro'
 
+// Controle de alterações não salvas no modal de registro: evita perder
+// observações (às vezes ditadas e longas) por um fechamento acidental.
+let modalEntryKey = null;       // 'novo' ou o id do registro em edição, enquanto o modal está aberto
+let modalSnapshotInicial = '';  // "foto" dos campos assim que o modal foi aberto, para detectar alterações
+let draftTimeoutId = null;
+
 function gerarId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
@@ -193,7 +199,10 @@ function configurarFormAuth() {
             const campoSenha = document.getElementById('authPassword');
             const estaVisivel = campoSenha.type === 'text';
             campoSenha.type = estaVisivel ? 'password' : 'text';
-            togglePasswordBtn.textContent = estaVisivel ? '👁️' : '🙈';
+            const iconeAberto = togglePasswordBtn.querySelector('.icon-eye-open');
+            const iconeFechado = togglePasswordBtn.querySelector('.icon-eye-off');
+            if (iconeAberto) iconeAberto.hidden = estaVisivel ? false : true;
+            if (iconeFechado) iconeFechado.hidden = estaVisivel ? true : false;
             const rotulo = estaVisivel ? 'Mostrar senha' : 'Ocultar senha';
             togglePasswordBtn.title = rotulo;
             togglePasswordBtn.setAttribute('aria-label', rotulo);
@@ -231,7 +240,13 @@ function configurarFormAuth() {
 }
 
 function sair() {
-    if (!confirm('Sair da conta neste aparelho?')) return;
+    const modalAberto = document.getElementById('modalBackdrop').style.display === 'flex';
+    if (modalAberto && formularioTemAlteracoes()) {
+        if (!confirm('Você tem um registro com alterações não salvas. Sair da conta agora vai descartá-las. Deseja continuar mesmo assim?')) return;
+    } else if (!confirm('Sair da conta neste aparelho?')) {
+        return;
+    }
+    if (modalAberto) fecharModal();
     auth.signOut();
 }
 
@@ -296,6 +311,89 @@ function capturarLocalizacao() {
 }
 
 // ------------------------------------------------------------
+// Rascunho local + detecção de alterações não salvas
+//
+// Enquanto o modal de registro está aberto, cada alteração é salva
+// (com debounce) no localStorage do aparelho. Se o app fechar
+// inesperadamente (aba fechada sem querer, navegador travou, bateria
+// acabou no meio de um ditado longo) o rascunho é oferecido de volta
+// na próxima vez que esse mesmo registro (ou um novo) for aberto.
+// Isso é só uma rede de segurança local — não substitui o Salvar.
+// ------------------------------------------------------------
+const PREFIXO_RASCUNHO = 'toth-rascunho-';
+
+// Fonte única com os ids dos campos do formulário de registro. Antes esses
+// mesmos 10 campos eram lidos/escritos "na mão" em quatro funções diferentes
+// (rascunho, salvar, imprimir) — bastava adicionar um campo novo ao HTML
+// para alguma dessas funções ficar desatualizada sem ninguém perceber.
+// Agora só existe esta lista; lerCamposFormulario/preencherCamposFormulario
+// e quem mais precisar dos campos usam ela.
+const IDS_CAMPOS_FORMULARIO = [
+    'entryType', 'entryDate', 'entryLocation', 'entryCode',
+    'entrySummary', 'entryDetails', 'entryTags', 'entryStatus',
+    'entryLat', 'entryLng',
+];
+const PADROES_CAMPOS_FORMULARIO = { entryType: 'atendimento', entryStatus: 'concluido' };
+
+function lerCamposFormulario() {
+    const campos = {};
+    IDS_CAMPOS_FORMULARIO.forEach((id) => { campos[id] = document.getElementById(id).value; });
+    return campos;
+}
+
+function preencherCamposFormulario(campos) {
+    IDS_CAMPOS_FORMULARIO.forEach((id) => {
+        const padrao = id === 'entryDate' ? dataLocalHoje() : (PADROES_CAMPOS_FORMULARIO[id] || '');
+        document.getElementById(id).value = (campos && campos[id]) || padrao;
+    });
+}
+
+function snapshotFormularioAtual() {
+    return JSON.stringify(lerCamposFormulario());
+}
+
+// Compara o estado atual do formulário com a "foto" tirada quando o
+// modal foi aberto. É a base tanto do aviso ao fechar quanto do
+// aviso ao sair da página com o modal aberto.
+function formularioTemAlteracoes() {
+    if (!modalEntryKey) return false;
+    return snapshotFormularioAtual() !== modalSnapshotInicial;
+}
+
+function salvarRascunhoLocal() {
+    if (!modalEntryKey) return;
+    try {
+        localStorage.setItem(PREFIXO_RASCUNHO + modalEntryKey, JSON.stringify({
+            campos: lerCamposFormulario(),
+            quando: Date.now(),
+        }));
+    } catch (err) {
+        // localStorage pode estar indisponível (modo privado, cota cheia etc.);
+        // o rascunho é só uma rede de segurança extra, então apenas ignora.
+    }
+}
+
+function lerRascunhoLocal(chave) {
+    try {
+        const bruto = localStorage.getItem(PREFIXO_RASCUNHO + chave);
+        return bruto ? JSON.parse(bruto) : null;
+    } catch (err) {
+        return null;
+    }
+}
+
+function limparRascunhoLocal(chave) {
+    try { localStorage.removeItem(PREFIXO_RASCUNHO + chave); } catch (err) { /* ignora */ }
+}
+
+function formatarQuandoRascunho(ts) {
+    const diffMin = Math.round((Date.now() - ts) / 60000);
+    if (diffMin < 1) return 'agora há pouco';
+    if (diffMin < 60) return `há ${diffMin} min`;
+    return new Date(ts).toLocaleString('pt-BR');
+}
+
+// ------------------------------------------------------------
 // Modal - abrir / fechar
 // ------------------------------------------------------------
 function abrirModal(id = null) {
@@ -311,7 +409,11 @@ function abrirModal(id = null) {
 
     if (id) {
         const reg = registros.find(r => r.id === id);
-        if (!reg) return;
+        if (!reg) {
+            modalBackdrop.style.display = 'none';
+            mostrarToast('Este registro não foi encontrado (pode ter sido excluído em outro aparelho).', true);
+            return;
+        }
         modalTitle.textContent = 'Editar registro';
         document.getElementById('entryId').value = reg.id;
         document.getElementById('entryType').value = reg.entryType;
@@ -336,12 +438,51 @@ function abrirModal(id = null) {
         deleteEntryBtn.style.display = 'none';
         if (printEntryBtn) printEntryBtn.style.display = 'none';
     }
+
+    // A partir daqui os campos refletem o registro salvo (ou um formulário
+    // em branco). Essa é a "foto" usada para saber se algo foi alterado.
+    modalEntryKey = id || 'novo';
+    modalSnapshotInicial = snapshotFormularioAtual();
+
+    // Se houver um rascunho salvo localmente para este mesmo registro (ou
+    // para um novo registro), oferece recuperá-lo — cobre o caso de o app
+    // ter sido fechado no meio de uma anotação antes de dar tempo de salvar.
+    const rascunho = lerRascunhoLocal(modalEntryKey);
+    if (rascunho && rascunho.campos) {
+        const recuperar = confirm(
+            `Encontramos um rascunho não salvo deste registro (${formatarQuandoRascunho(rascunho.quando)}).\n\nDeseja recuperá-lo?`
+        );
+        if (recuperar) {
+            preencherCamposFormulario(rascunho.campos);
+        } else {
+            limparRascunhoLocal(modalEntryKey);
+        }
+    }
 }
 
+// Fecha o modal sem perguntar nada — usado internamente logo após um
+// salvamento ou exclusão bem-sucedidos, quando não há mais nada a perder.
 function fecharModal() {
     const modalBackdrop = document.getElementById('modalBackdrop');
     if (window.pararDitadoPorVoz) window.pararDitadoPorVoz();
+    clearTimeout(draftTimeoutId);
     if (modalBackdrop) modalBackdrop.style.display = 'none';
+    modalEntryKey = null;
+    modalSnapshotInicial = '';
+}
+
+// Fecha o modal "pelo usuário" (X, Cancelar, clique fora, Esc): se houver
+// alterações não salvas, confirma antes de descartar — para não perder
+// uma observação longa (às vezes ditada) por um toque sem querer.
+function tentarFecharModal() {
+    if (formularioTemAlteracoes()) {
+        const descartar = confirm('Você tem alterações não salvas neste registro. Deseja descartá-las?');
+        if (!descartar) return;
+        limparRascunhoLocal(modalEntryKey);
+    } else if (modalEntryKey) {
+        limparRascunhoLocal(modalEntryKey);
+    }
+    fecharModal();
 }
 
 // ------------------------------------------------------------
@@ -349,22 +490,37 @@ function fecharModal() {
 // ------------------------------------------------------------
 function salvarRegistro(e) {
     e.preventDefault();
-    if (!currentUser) return;
+
+    if (!currentUser) {
+        alert('Sua sessão caiu. Faça login novamente para salvar este registro (o texto digitado não será perdido — apenas entre na conta e tente salvar de novo).');
+        return;
+    }
+
+    // required do HTML não pega um resumo só com espaços; confere de novo aqui
+    // para não salvar um registro sem título de verdade na lista.
+    const campos = lerCamposFormulario();
+    const resumo = campos.entrySummary.trim();
+    if (!resumo) {
+        alert('Preencha o resumo da atividade antes de salvar.');
+        document.getElementById('entrySummary').focus();
+        return;
+    }
 
     const idAtual = document.getElementById('entryId').value;
     const id = idAtual || gerarId();
+    const chaveRascunho = modalEntryKey;
 
     const reg = {
-        entryType: document.getElementById('entryType').value,
-        entryDate: document.getElementById('entryDate').value,
-        entryLocation: document.getElementById('entryLocation').value.trim(),
-        entryCode: document.getElementById('entryCode').value.trim(),
-        entrySummary: document.getElementById('entrySummary').value.trim(),
-        entryDetails: document.getElementById('entryDetails').value,
-        entryTags: document.getElementById('entryTags').value.trim(),
-        entryStatus: document.getElementById('entryStatus').value,
-        entryLat: document.getElementById('entryLat').value ? parseFloat(document.getElementById('entryLat').value) : null,
-        entryLng: document.getElementById('entryLng').value ? parseFloat(document.getElementById('entryLng').value) : null,
+        entryType: campos.entryType,
+        entryDate: campos.entryDate,
+        entryLocation: campos.entryLocation.trim(),
+        entryCode: campos.entryCode.trim(),
+        entrySummary: resumo,
+        entryDetails: campos.entryDetails,
+        entryTags: campos.entryTags.trim(),
+        entryStatus: campos.entryStatus,
+        entryLat: campos.entryLat ? parseFloat(campos.entryLat) : null,
+        entryLng: campos.entryLng ? parseFloat(campos.entryLng) : null,
         atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
     };
 
@@ -373,32 +529,46 @@ function salvarRegistro(e) {
 
     db.collection('usuarios').doc(currentUser.uid).collection('registros').doc(id).set(reg, { merge: true })
         .then(() => {
+            limparRascunhoLocal(chaveRascunho);
             fecharModal();
             mostrarToast('Registro salvo e sincronizado.');
         })
         .catch((err) => {
             console.error(err);
-            alert('Não foi possível salvar agora. Se estiver offline, o registro será enviado assim que a conexão voltar.');
-            fecharModal();
+            // Não fecha o modal nem apaga o rascunho: se o erro não for de rede
+            // (ex.: sem permissão), o usuário ainda pode copiar/tentar de novo
+            // sem perder o que escreveu. Offline, o Firestore reenvia sozinho
+            // quando a conexão voltar, mas só depois de o app conseguir
+            // reabrir a mesma sessão — por segurança mantemos tudo na tela.
+            alert('Não foi possível salvar agora: ' + (err.message || 'verifique sua conexão') + '\n\nO conteúdo continua aqui no formulário — tente salvar novamente.');
         })
         .finally(() => { if (submitBtn) submitBtn.disabled = false; });
 }
 
 function excluirRegistro() {
-    if (!currentUser) return;
+    if (!currentUser) {
+        alert('Sua sessão caiu. Faça login novamente para excluir este registro.');
+        return;
+    }
     const id = document.getElementById('entryId').value;
     if (!id) return;
     if (!confirm('Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.')) return;
 
+    const chaveRascunho = modalEntryKey;
+    const btn = document.getElementById('deleteEntryBtn');
+    if (btn) btn.disabled = true;
+
     db.collection('usuarios').doc(currentUser.uid).collection('registros').doc(id).delete()
         .then(() => {
+            limparRascunhoLocal(chaveRascunho);
             fecharModal();
             mostrarToast('Registro excluído.');
         })
         .catch((err) => {
             console.error(err);
             alert('Não foi possível excluir agora: ' + err.message);
-        });
+        })
+        .finally(() => { if (btn) btn.disabled = false; });
 }
 
 // ------------------------------------------------------------
@@ -494,18 +664,8 @@ function imprimirRegistroAtual() {
     // Lê os valores atuais do formulário (não o registro salvo em
     // `registros`), para que qualquer edição feita na tela — mesmo sem
     // ter clicado em "Salvar" ainda — apareça corretamente na impressão.
-    const reg = {
-        entryType: document.getElementById('entryType').value,
-        entryDate: document.getElementById('entryDate').value,
-        entryLocation: document.getElementById('entryLocation').value,
-        entryCode: document.getElementById('entryCode').value,
-        entrySummary: document.getElementById('entrySummary').value,
-        entryDetails: document.getElementById('entryDetails').value,
-        entryTags: document.getElementById('entryTags').value,
-        entryStatus: document.getElementById('entryStatus').value,
-        entryLat: document.getElementById('entryLat').value || null,
-        entryLng: document.getElementById('entryLng').value || null,
-    };
+    const campos = lerCamposFormulario();
+    const reg = { ...campos, entryLat: campos.entryLat || null, entryLng: campos.entryLng || null };
 
     const win = window.open('', '_blank');
     if (!win) {
@@ -515,16 +675,7 @@ function imprimirRegistroAtual() {
 
     const html = `<html><head><meta charset="utf-8"><title>Registro — ${escapeHtml(reg.entrySummary || '')}</title><style>
         ${CSS_PAGINA_CADERNO}
-    </style></head><body>
-        <h1>Caderno de Campo — Paulo Xavier</h1>
-        <p class="meta">${formatarData(reg.entryDate)} — ${escapeHtml(LABELS_TIPO[reg.entryType] || reg.entryType)} — ${escapeHtml(LABELS_STATUS[reg.entryStatus] || reg.entryStatus)}</p>
-        <h2>${escapeHtml(reg.entrySummary)}</h2>
-        <p class="campo"><strong>Local/Instituição:</strong> ${escapeHtml(reg.entryLocation || '—')}</p>
-        <p class="campo"><strong>Código do caso/sujeito:</strong> ${escapeHtml(reg.entryCode || '—')}</p>
-        <p class="campo"><strong>Tags:</strong> ${escapeHtml(reg.entryTags || '—')}</p>
-        ${(reg.entryLat && reg.entryLng) ? `<p class="campo"><strong>Coordenadas:</strong> ${reg.entryLat}, ${reg.entryLng}</p>` : ''}
-        <p class="obs">${escapeHtml(reg.entryDetails || '')}</p>
-    </body></html>`;
+    </style></head><body>${montarBlocoConteudoRegistro(reg)}</body></html>`;
 
     win.document.write(html);
     win.document.close();
@@ -581,6 +732,24 @@ const CSS_PAGINA_CADERNO = `
     }
     .folha:last-child { page-break-after: auto; }
 `;
+
+// Bloco de HTML com o conteúdo de um único registro, usado tanto pela
+// impressão de um registro avulso (imprimirRegistroAtual) quanto pela
+// alternativa de PDF via impressão do navegador (exportarPDFViaImpressao).
+// Antes esse mesmo bloco existia duplicado (e ligeiramente diferente) nas
+// duas funções; agora tem uma única versão para as duas.
+function montarBlocoConteudoRegistro(reg) {
+    return `
+        <h1>Caderno de Campo — Paulo Xavier</h1>
+        <p class="meta">${formatarData(reg.entryDate)} — ${escapeHtml(LABELS_TIPO[reg.entryType] || reg.entryType)} — ${escapeHtml(LABELS_STATUS[reg.entryStatus] || reg.entryStatus)}</p>
+        <h2>${escapeHtml(reg.entrySummary)}</h2>
+        <p class="campo"><strong>Local/Instituição:</strong> ${escapeHtml(reg.entryLocation || '—')}</p>
+        <p class="campo"><strong>Código do caso/sujeito:</strong> ${escapeHtml(reg.entryCode || '—')}</p>
+        <p class="campo"><strong>Tags:</strong> ${escapeHtml(reg.entryTags || '—')}</p>
+        ${(reg.entryLat && reg.entryLng) ? `<p class="campo"><strong>Coordenadas:</strong> ${reg.entryLat}, ${reg.entryLng}</p>` : ''}
+        <p class="obs">${escapeHtml(reg.entryDetails || '')}</p>
+    `;
+}
 
 // ------------------------------------------------------------
 // Exportações (continuam operando sobre os dados já sincronizados)
@@ -688,21 +857,52 @@ function exportarPDF() {
     let y = margem;
 
     // Desenha o fundo de "folha de caderno" na página atual: cor
-    // pergaminho, pauta horizontal e uma linha de margem dourada à
-    // esquerda — para o PDF ter a mesma identidade visual do app.
+    // pergaminho, moldura como os cartões da tela, pauta horizontal e uma
+    // linha de margem dourada à esquerda — para o PDF ter a mesma
+    // identidade visual do resto do app (antes as linhas eram finas e
+    // claras demais e a folha acabava saindo praticamente em branco).
     function desenharFundoCaderno() {
         doc.setFillColor(253, 246, 227);
         doc.rect(0, 0, larguraPagina, alturaPagina, 'F');
 
-        doc.setDrawColor(214, 200, 236);
-        doc.setLineWidth(0.1);
-        for (let linhaY = margem + 6; linhaY < alturaPagina - margem; linhaY += 6) {
-            doc.line(margem - 4, linhaY, larguraPagina - margem + 4, linhaY);
-        }
+        // Selo circular discreto no canto, ecoando o emblema redondo e
+        // dourado do ícone do app — só um detalhe de fundo, bem claro,
+        // não deve competir com o texto.
+        doc.setDrawColor(230, 214, 180);
+        doc.setLineWidth(2.2);
+        doc.circle(larguraPagina - 24, 24, 13, 'S');
+        doc.setDrawColor(222, 205, 240);
+        doc.setLineWidth(1.2);
+        doc.circle(larguraPagina - 24, 24, 17, 'S');
 
+        // Faixa de cor da marca (violeta > azul > dourado) entre a borda
+        // da página e a moldura, como um cabeçalho de caderno.
+        const alturaFaixa = 2.2;
+        const terco = (larguraPagina - 16) / 3;
+        doc.setFillColor(93, 34, 214);
+        doc.rect(8, 4, terco, alturaFaixa, 'F');
+        doc.setFillColor(5, 121, 248);
+        doc.rect(8 + terco, 4, terco, alturaFaixa, 'F');
+        doc.setFillColor(201, 154, 58);
+        doc.rect(8 + terco * 2, 4, terco, alturaFaixa, 'F');
+
+        // Moldura da folha, como os cartões (.entry-card / .auth-card) na tela
         doc.setDrawColor(201, 154, 58);
         doc.setLineWidth(0.5);
-        doc.line(margem - 6, margem - 6, margem - 6, alturaPagina - margem + 6);
+        doc.roundedRect(8, 8, larguraPagina - 16, alturaPagina - 16, 3, 3, 'S');
+
+        // Pauta horizontal — mais grossa e mais escura que antes para
+        // realmente aparecer na tela e na impressão, não só de perto.
+        doc.setDrawColor(205, 182, 230);
+        doc.setLineWidth(0.3);
+        for (let linhaY = margem + 6; linhaY < alturaPagina - margem + 4; linhaY += 6) {
+            doc.line(margem - 2, linhaY, larguraPagina - margem + 2, linhaY);
+        }
+
+        // Linha de margem dourada, como um caderno pautado de verdade
+        doc.setDrawColor(201, 154, 58);
+        doc.setLineWidth(0.7);
+        doc.line(margem - 6, 12, margem - 6, alturaPagina - 12);
     }
 
     function novaPagina() {
@@ -769,16 +969,7 @@ function exportarPDFViaImpressao() {
     </style></head><body>`;
 
     ordenados.forEach(reg => {
-        html += `<div class="folha">
-            <h1>Caderno de Campo — Paulo Xavier</h1>
-            <p class="meta">${formatarData(reg.entryDate)} — ${escapeHtml(LABELS_TIPO[reg.entryType] || reg.entryType)} — ${escapeHtml(LABELS_STATUS[reg.entryStatus] || reg.entryStatus)}</p>
-            <h2>${escapeHtml(reg.entrySummary)}</h2>
-            <p class="campo"><strong>Local/Instituição:</strong> ${escapeHtml(reg.entryLocation || '—')}</p>
-            <p class="campo"><strong>Código:</strong> ${escapeHtml(reg.entryCode || '—')}</p>
-            <p class="campo"><strong>Tags:</strong> ${escapeHtml(reg.entryTags || '—')}</p>
-            ${(reg.entryLat && reg.entryLng) ? `<p class="campo"><strong>Coordenadas:</strong> ${reg.entryLat}, ${reg.entryLng}</p>` : ''}
-            <p class="obs">${escapeHtml(reg.entryDetails || '')}</p>
-        </div>`;
+        html += `<div class="folha">${montarBlocoConteudoRegistro(reg)}</div>`;
     });
 
     html += `</body></html>`;
@@ -1070,14 +1261,38 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('deleteEntryBtn').addEventListener('click', excluirRegistro);
     document.getElementById('printEntryBtn').addEventListener('click', imprimirRegistroAtual);
     document.getElementById('getLocationBtn').addEventListener('click', capturarLocalizacao);
-    document.getElementById('closeModalBtn').addEventListener('click', fecharModal);
-    document.getElementById('cancelModalBtn').addEventListener('click', fecharModal);
+    document.getElementById('closeModalBtn').addEventListener('click', tentarFecharModal);
+    document.getElementById('cancelModalBtn').addEventListener('click', tentarFecharModal);
 
     document.getElementById('modalBackdrop').addEventListener('click', (e) => {
-        if (e.target.id === 'modalBackdrop') fecharModal();
+        if (e.target.id === 'modalBackdrop') tentarFecharModal();
     });
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') fecharModal();
+        if (e.key === 'Escape' && document.getElementById('modalBackdrop').style.display === 'flex') {
+            tentarFecharModal();
+        }
+    });
+
+    // Salva um rascunho local (debounced) a cada alteração no formulário,
+    // enquanto o modal estiver aberto — ver "Rascunho local" acima.
+    ['input', 'change'].forEach((evento) => {
+        document.getElementById('entryForm').addEventListener(evento, () => {
+            clearTimeout(draftTimeoutId);
+            draftTimeoutId = setTimeout(salvarRascunhoLocal, 600);
+        });
+    });
+
+    // Se o usuário fechar a aba/atualizar a página com o modal aberto e
+    // alterações não salvas, o navegador pergunta antes de sair (o texto
+    // exato é controlado pelo próprio navegador, não pelo app). O rascunho
+    // já foi salvo pelo listener acima, então mesmo se ele sair mesmo assim
+    // o conteúdo pode ser recuperado da próxima vez que abrir este registro.
+    window.addEventListener('beforeunload', (e) => {
+        if (window.pararDitadoPorVoz) window.pararDitadoPorVoz();
+        if (document.getElementById('modalBackdrop').style.display === 'flex' && formularioTemAlteracoes()) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
     });
 
     document.getElementById('newEntryBtn').addEventListener('click', () => abrirModal());
