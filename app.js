@@ -614,7 +614,11 @@ function renderizar() {
 
     const busca = termoBusca.toLowerCase();
     const filtrados = registros.filter(reg => {
-        const texto = `${reg.entryLocation} ${reg.entryCode} ${reg.entrySummary} ${reg.entryTags}`.toLowerCase();
+        // Usa "" como padrão para cada campo: sem isso, um registro sem
+        // algum desses campos (ex.: mais antigo, salvo antes de o campo
+        // existir) fazia o JavaScript escrever a palavra "undefined" no
+        // texto buscável, poluindo a busca.
+        const texto = `${reg.entryLocation || ''} ${reg.entryCode || ''} ${reg.entrySummary || ''} ${reg.entryTags || ''}`.toLowerCase();
         return correspondeAoFiltro(reg) && texto.includes(busca);
     });
 
@@ -1122,8 +1126,14 @@ function configurarDitadoPorVoz() {
 
     function juntarTexto(base, adicional) {
         if (!adicional) return base;
-        if (!base) return adicional;
-        return /[\s\n]$/.test(base) ? base + adicional : base + ' ' + adicional;
+        // O Chrome costuma devolver os trechos de continuação já com um
+        // espaço no início (" palavra"). Sem remover esse espaço aqui,
+        // o espaço que a gente mesmo adiciona abaixo vira espaço duplo
+        // ("frase  outra") — por isso limpa antes de juntar.
+        const limpo = adicional.replace(/^\s+/, '');
+        if (!limpo) return base;
+        if (!base) return limpo;
+        return /\s$/.test(base) ? base + limpo : base + ' ' + limpo;
     }
 
     function formatarDuracao(ms) {
@@ -1141,10 +1151,17 @@ function configurarDitadoPorVoz() {
         botao.title = 'Parar ditado';
         botao.setAttribute('aria-label', 'Parar ditado');
         statusEl.classList.add('active');
-        inicioGravacao = Date.now();
-        atualizarTimer();
-        clearInterval(timerId);
-        timerId = setInterval(atualizarTimer, 1000);
+        // Só zera o cronômetro quando é de fato o início de uma sessão
+        // nova de ditado (timerId ainda null). Quando o reconhecimento
+        // reinicia sozinho no meio do ditado (silêncio, limite de tempo
+        // do navegador etc.), este mesmo onstart é chamado de novo — sem
+        // essa checagem o tempo mostrado voltava para 0:00 a cada
+        // reinício, em vez de mostrar o tempo total do ditado.
+        if (!timerId) {
+            inicioGravacao = Date.now();
+            atualizarTimer();
+            timerId = setInterval(atualizarTimer, 1000);
+        }
     }
 
     function desligarUI(mensagem) {
@@ -1196,18 +1213,28 @@ function configurarDitadoPorVoz() {
     reconhecimento.onstart = () => {
         iniciando = false;
         gravando = true;
-        falhasSeguidas = 0;
         ligarUI();
     };
 
     reconhecimento.onresult = (event) => {
+        // Zera o contador de falhas aqui, não no onstart: "iniciar" não
+        // significa que está funcionando. Se o reconhecimento começa e
+        // falha de novo em seguida, sem nunca chegar a reconhecer nada,
+        // isso já é um problema real — zerar no onstart escondia essas
+        // falhas e o ditado ficava reiniciando escuta pra sempre sem
+        // nunca avisar o usuário.
+        falhasSeguidas = 0;
         let interino = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
             const trecho = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
                 transcricaoFinal = juntarTexto(transcricaoFinal, trecho);
             } else {
-                interino += trecho;
+                // Também usa juntarTexto aqui: em alguns navegadores mais
+                // de um trecho "provisório" pode chegar no mesmo evento,
+                // e concatenar direto (interino += trecho) grudava as
+                // palavras sem espaço entre elas.
+                interino = juntarTexto(interino, trecho);
             }
         }
         const meio = juntarTexto(transcricaoFinal, interino);
