@@ -7,8 +7,8 @@
   "id": "./index.html",
   "display": "standalone",
   "categories": ["productivity", "utilities"],
-  "background_color": "#efe1c3",
-  "theme_color": "#efe1c3",
+  "background_color": "#0c0930",
+  "theme_color": "#0c0930",
   "orientation": "portrait-primary",
   "lang": "pt-BR",
   "icons": [
@@ -16,13 +16,25 @@
       "src": "icone-psi-toth-192-tech-mini.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "icone-psi-toth-512-tech-mini.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icone-psi-toth-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icone-psi-toth-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
