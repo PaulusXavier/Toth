@@ -251,8 +251,16 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   border-radius: var(--radius-sm);
   padding: 0 .8rem;
   font-size: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
 }
 .gps-btn:hover { border-color: var(--toth-blue); }
+
+.icon-only-btn { color: var(--text-muted); }
+.icon-only-btn:hover { color: var(--toth-blue); }
+.icon-eye { display: block; }
 
 .dictation-row {
   display: flex;
