@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// Regras sugeridas para o Diário de Campo Toth.
+//
+// Este arquivo não veio entre os arquivos enviados — o app.js grava tudo em
+// usuarios/{uid}/registros/{registroId}, mas sem uma regra publicada no
+// Firestore o padrão do Firebase (ou uma regra de teste esquecida em modo
+// aberto) pode deixar qualquer pessoa autenticada — ou até anônima — ler ou
+// escrever os registros de QUALQUER usuário, incluindo observações
+// psicossociais de famílias atendidas. Vale conferir em:
+// Console do Firebase > Firestore Database > Regras, e publicar algo
+// equivalente a isto (ajuste apenas se a estrutura de coleções mudar).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Cada usuário só pode ler/escrever a própria subcoleção de registros —
+    // nunca a de outro uid, mesmo estando logado.
+    match /usuarios/{uid}/registros/{registroId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Bloqueia qualquer outro caminho por padrão (nada de acesso implícito
+    // a coleções futuras que alguém venha a criar sem pensar nas regras).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
