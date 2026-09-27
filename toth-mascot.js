@@ -46,12 +46,12 @@
       "#tothMascotBotao:focus-visible{outline:2px solid var(--toth-blue,#0579f8);outline-offset:3px;}" +
       "#tothMascotBotao svg{display:block;width:64px;height:64px;}" +
       ".toth-personagem{animation:tothFlutuar 2.8s ease-in-out infinite;}" +
-      ".toth-braco{transform-origin:120px 124px;}" +
+      ".toth-braco{transform-origin:118px 134px;}" +
       "#tothMascotWrap.toth-acenando .toth-braco{animation:tothAceno 1.4s ease-in-out 2;}" +
       ".toth-olho{animation:tothPiscar 4.5s ease-in-out infinite;}" +
       "@keyframes tothFlutuar{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}" +
       "@keyframes tothAceno{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}" +
-      "@keyframes tothPiscar{0%,86%,100%{ry:4px}92%{ry:.6px}}" +
+      "@keyframes tothPiscar{0%,86%,100%{ry:5.5px}92%{ry:.6px}}" +
       "#tothMascotBalao{max-width:230px;background:var(--panel,#faf3e3);color:var(--text,#2b2013);" +
       "border:1px solid var(--border-strong,rgba(93,34,214,.36));border-radius:1rem;padding:.65rem .85rem;" +
       "font-size:.82rem;line-height:1.35;box-shadow:var(--shadow,0 12px 32px rgba(0,0,0,.35));" +
@@ -81,19 +81,29 @@
     '<circle cx="100" cy="112" r="88" fill="url(#tothPapiro)" stroke="url(#tothGouro)" stroke-width="10"/>' +
     '<circle cx="100" cy="112" r="78" fill="none" stroke="#8a6a2e" stroke-width="1.5" opacity=".35"/>' +
     '<g class="toth-personagem">' +
-    '<circle cx="100" cy="38" r="18" fill="#c99a3a"/>' +
-    '<circle cx="108" cy="34" r="15" fill="url(#tothPapiro)"/>' +
-    '<circle cx="100" cy="28" r="7" fill="#e8c877" stroke="#8a6a2e" stroke-width="1"/>' +
-    '<path class="toth-braco" d="M120,124 C132,120 142,108 145,88" stroke="#131b2e" stroke-width="14" stroke-linecap="round" fill="none"/>' +
-    '<path d="M80,124 C68,120 58,108 55,88" stroke="#131b2e" stroke-width="14" stroke-linecap="round" fill="none"/>' +
-    '<path d="M77,132 C77,150 82,165 85,185 L115,185 C118,165 123,150 123,132 C123,124 113,120 100,120 C87,120 77,124 77,132 Z" fill="#131b2e"/>' +
-    '<circle cx="100" cy="193" r="5" fill="none" stroke="#131b2e" stroke-width="3"/>' +
-    '<circle cx="100" cy="76" r="28" fill="#f7ecd3" stroke="#131b2e" stroke-width="3"/>' +
-    '<path d="M79,63 q-6,-2 -6,-8" stroke="#131b2e" stroke-width="3" stroke-linecap="round" fill="none"/>' +
-    '<path d="M121,63 q6,-2 6,-8" stroke="#131b2e" stroke-width="3" stroke-linecap="round" fill="none"/>' +
-    '<path d="M97,76 Q88,102 94,126 Q100,130 104,124 Q112,100 103,76 Z" fill="url(#tothBico)" stroke="#131b2e" stroke-width="1.5"/>' +
-    '<ellipse class="toth-olho" cx="90" cy="70" rx="4" ry="4" fill="#131b2e"/>' +
-    '<ellipse class="toth-olho" cx="110" cy="70" rx="4" ry="4" fill="#131b2e"/>' +
+    '<circle cx="100" cy="40" r="17" fill="#c99a3a"/>' +
+    '<circle cx="107" cy="35" r="14" fill="url(#tothPapiro)"/>' +
+    '<circle cx="100" cy="30" r="7" fill="#e8c877" stroke="#8a6a2e" stroke-width="1"/>' +
+    '<path class="toth-braco" d="M118,134 C130,128 138,116 138,100" stroke="#131b2e" stroke-width="17" stroke-linecap="round" fill="none"/>' +
+    '<path d="M82,134 C70,128 62,116 62,100" stroke="#131b2e" stroke-width="17" stroke-linecap="round" fill="none"/>' +
+    '<circle cx="138" cy="98" r="9" fill="#131b2e"/>' +
+    '<circle cx="62" cy="98" r="9" fill="#131b2e"/>' +
+    '<path d="M78,140 C78,158 82,172 86,182 L114,182 C118,172 122,158 122,140 C122,130 112,124 100,124 C88,124 78,130 78,140 Z" fill="#131b2e"/>' +
+    '<ellipse cx="90" cy="186" rx="7" ry="5" fill="#131b2e"/>' +
+    '<ellipse cx="110" cy="186" rx="7" ry="5" fill="#131b2e"/>' +
+    '<circle cx="100" cy="82" r="36" fill="#f7ecd3" stroke="#131b2e" stroke-width="3"/>' +
+    '<path d="M76,66 q-5,-3 -4,-9" stroke="#131b2e" stroke-width="2.5" stroke-linecap="round" fill="none"/>' +
+    '<path d="M124,66 q5,-3 4,-9" stroke="#131b2e" stroke-width="2.5" stroke-linecap="round" fill="none"/>' +
+    '<ellipse cx="72" cy="92" rx="8" ry="5" fill="#e8836c" opacity=".45"/>' +
+    '<ellipse cx="128" cy="92" rx="8" ry="5" fill="#e8836c" opacity=".45"/>' +
+    '<path d="M93,84 Q100,110 100,118 Q100,110 107,84 Q107,78 100,78 Q93,78 93,84 Z" fill="url(#tothBico)" stroke="#131b2e" stroke-width="1.5"/>' +
+    '<circle cx="82" cy="80" r="11" fill="#ffffff" stroke="#131b2e" stroke-width="1.5"/>' +
+    '<circle cx="118" cy="80" r="11" fill="#ffffff" stroke="#131b2e" stroke-width="1.5"/>' +
+    '<ellipse class="toth-olho" cx="83" cy="82" rx="5.5" ry="5.5" fill="#131b2e"/>' +
+    '<ellipse class="toth-olho" cx="117" cy="82" rx="5.5" ry="5.5" fill="#131b2e"/>' +
+    '<circle cx="80.5" cy="78.5" r="1.8" fill="#ffffff"/>' +
+    '<circle cx="115.5" cy="78.5" r="1.8" fill="#ffffff"/>' +
+    '<path d="M92,102 Q100,107 108,102" stroke="#131b2e" stroke-width="2" stroke-linecap="round" fill="none"/>' +
     '</g>' +
     "</svg>";
 
