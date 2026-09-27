@@ -104,6 +104,9 @@ function traduzirErroAuth(codigo) {
         'auth/weak-password': 'A senha precisa ter pelo menos 6 caracteres.',
         'auth/network-request-failed': 'Falha de conexão. Verifique sua internet.',
         'auth/too-many-requests': 'Muitas tentativas. Aguarde um momento e tente novamente.',
+        'auth/missing-password': 'Digite sua senha.',
+        'auth/missing-email': 'Digite seu e-mail.',
+        'auth/user-token-expired': 'Sua sessão expirou. Faça login novamente.',
     };
     return mapa[codigo] || 'Não foi possível concluir. Tente novamente.';
 }
@@ -124,8 +127,15 @@ function atualizarStatusSync(estado) {
     }
 }
 
+// Referência única para a coleção de registros de um usuário — evita
+// repetir esta mesma cadeia (usuarios/uid/registros) em vários pontos
+// do código (sincronização, salvar, excluir, importar backup).
+function colecaoRegistros(uid) {
+    return db.collection('usuarios').doc(uid).collection('registros');
+}
+
 function iniciarSincronizacao(uid) {
-    const colecao = db.collection('usuarios').doc(uid).collection('registros');
+    const colecao = colecaoRegistros(uid);
     if (unsubscribeSnapshot) unsubscribeSnapshot();
     carregandoRegistros = true;
     renderizar();
@@ -151,12 +161,27 @@ function pararSincronizacao() {
     carregandoRegistros = false;
 }
 
+// Atalho do PWA "Novo registro" (manifest.json > shortcuts): abre o app
+// direto em index.html?novo=1. Só faz sentido depois que o usuário está
+// autenticado e a tela do caderno está visível.
+function abrirModalViaAtalho() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('novo') !== '1') return;
+    abrirModal();
+    // Remove o parâmetro da URL para não reabrir o modal sozinho se a
+    // página for recarregada (F5, o SW atualizando, etc.).
+    params.delete('novo');
+    const query = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : ''));
+}
+
 auth.onAuthStateChanged((user) => {
     currentUser = user;
     if (user) {
         mostrarTelaAuth(false);
         document.getElementById('userEmailLabel').textContent = user.email || '';
         iniciarSincronizacao(user.uid);
+        abrirModalViaAtalho();
     } else {
         pararSincronizacao();
         mostrarTelaAuth(true);
@@ -173,23 +198,30 @@ function configurarFormAuth() {
     const submitBtn = document.getElementById('authSubmitBtn');
     const toggleBtn = document.getElementById('authToggleBtn');
     const tituloEl = document.getElementById('authTitle');
+    const emailInput = document.getElementById('authEmail');
+    const senhaInput = document.getElementById('authPassword');
 
     function atualizarModo() {
-        erroEl.textContent = '';
         if (modoAuth === 'cadastro') {
             tituloEl.textContent = 'Criar conta';
             submitBtn.textContent = 'Criar conta';
             toggleBtn.textContent = 'Já tenho uma conta — Entrar';
+            // "new-password" sinaliza ao navegador/gerenciador de senhas que
+            // é uma senha NOVA sendo criada (sugere uma forte, em vez de
+            // preencher com uma senha antiga salva para este site).
+            senhaInput.autocomplete = 'new-password';
         } else {
             tituloEl.textContent = 'Entrar';
             submitBtn.textContent = 'Entrar';
             toggleBtn.textContent = 'Ainda não tenho conta — Criar conta';
+            senhaInput.autocomplete = 'current-password';
         }
     }
     atualizarModo();
 
     toggleBtn.addEventListener('click', () => {
         modoAuth = modoAuth === 'cadastro' ? 'entrar' : 'cadastro';
+        erroEl.textContent = '';
         atualizarModo();
     });
 
@@ -211,12 +243,19 @@ function configurarFormAuth() {
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
+        // Alguns navegadores ainda disparam o submit ao apertar Enter mesmo
+        // com o botão desabilitado; esta checagem evita mandar duas
+        // requisições de login/cadastro em paralelo por um duplo toque/Enter.
+        if (submitBtn.disabled) return;
+
         erroEl.textContent = '';
-        const email = document.getElementById('authEmail').value.trim();
-        const senha = document.getElementById('authPassword').value;
+        const email = emailInput.value.trim();
+        const senha = senhaInput.value;
 
         submitBtn.disabled = true;
         submitBtn.textContent = 'Aguarde…';
+        emailInput.disabled = true;
+        senhaInput.disabled = true;
 
         const acao = modoAuth === 'cadastro'
             ? auth.createUserWithEmailAndPassword(email, senha)
@@ -226,12 +265,14 @@ function configurarFormAuth() {
             .catch((err) => { erroEl.textContent = traduzirErroAuth(err.code); })
             .finally(() => {
                 submitBtn.disabled = false;
+                emailInput.disabled = false;
+                senhaInput.disabled = false;
                 atualizarModo();
             });
     });
 
     document.getElementById('authResetBtn').addEventListener('click', () => {
-        const email = document.getElementById('authEmail').value.trim();
+        const email = emailInput.value.trim();
         if (!email) { erroEl.textContent = 'Digite seu e-mail acima para receber o link de redefinição.'; return; }
         auth.sendPasswordResetEmail(email)
             .then(() => { erroEl.textContent = ''; alert('Enviamos um link de redefinição de senha para ' + email + '.'); })
@@ -527,7 +568,7 @@ function salvarRegistro(e) {
     const submitBtn = document.querySelector('#entryForm button[type="submit"]');
     if (submitBtn) submitBtn.disabled = true;
 
-    db.collection('usuarios').doc(currentUser.uid).collection('registros').doc(id).set(reg, { merge: true })
+    colecaoRegistros(currentUser.uid).doc(id).set(reg, { merge: true })
         .then(() => {
             limparRascunhoLocal(chaveRascunho);
             fecharModal();
@@ -558,7 +599,7 @@ function excluirRegistro() {
     const btn = document.getElementById('deleteEntryBtn');
     if (btn) btn.disabled = true;
 
-    db.collection('usuarios').doc(currentUser.uid).collection('registros').doc(id).delete()
+    colecaoRegistros(currentUser.uid).doc(id).delete()
         .then(() => {
             limparRascunhoLocal(chaveRascunho);
             fecharModal();
@@ -648,7 +689,7 @@ function renderizar() {
     }
 
     entryList.innerHTML = filtrados.map(reg => `
-        <div class="entry-card" data-type="${escapeHtml(reg.entryType)}" data-status="${escapeHtml(reg.entryStatus)}" onclick="abrirModal('${reg.id}')">
+        <div class="entry-card" data-type="${escapeHtml(reg.entryType)}" data-status="${escapeHtml(reg.entryStatus)}" role="button" tabindex="0" aria-label="${escapeHtml(LABELS_TIPO[reg.entryType] || reg.entryType)} — ${escapeHtml(reg.entrySummary)} — ${formatarData(reg.entryDate)}" onclick="abrirModal('${reg.id}')" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===event.currentTarget){event.preventDefault();abrirModal('${reg.id}');}">
             <div class="entry-card-head">
                 <span class="entry-type-badge entry-type-${escapeHtml(reg.entryType)}">${escapeHtml(LABELS_TIPO[reg.entryType] || reg.entryType)}</span>
                 <span class="entry-date">${formatarData(reg.entryDate)}</span>
@@ -1042,7 +1083,7 @@ function importarBackup(file) {
         // (confirm invertido: OK -> mesclar (não substitui), Cancelar -> substitui)
         const substituir = substituirTudo;
 
-        const colecao = db.collection('usuarios').doc(currentUser.uid).collection('registros');
+        const colecao = colecaoRegistros(currentUser.uid);
 
         const executarImportacao = async () => {
             if (substituir) {
