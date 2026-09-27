@@ -53,6 +53,7 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: rgba(93, 34, 214, .12);
 }
 
 body {
@@ -122,6 +123,7 @@ button {
   border: none;
   border-radius: var(--radius-sm);
   transition: transform .1s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
+  touch-action: manipulation;
 }
 button:active { transform: translateY(1px); }
 button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
@@ -460,12 +462,18 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   border-radius: var(--radius);
   padding: 1.1rem 1.2rem;
   cursor: pointer;
+  touch-action: manipulation;
   display: flex;
   flex-direction: column;
   gap: .4rem;
   transition: border-color .15s ease, transform .1s ease;
 }
 .entry-card:hover { border-color: var(--toth-blue); transform: translateY(-2px); }
+.entry-card:focus-visible {
+  outline: none;
+  border-color: var(--toth-blue);
+  box-shadow: 0 0 0 3px rgba(5, 121, 248, .18);
+}
 
 .entry-card-head {
   display: flex;
@@ -535,6 +543,10 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   width: 100%;
   max-width: 640px;
   max-height: calc(100vh - 4rem);
+  /* dvh acompanha a barra de endereço/teclado do navegador mobile;
+     navegadores sem suporte simplesmente ignoram esta linha e ficam
+     com o cálculo em vh acima. */
+  max-height: calc(100dvh - 4rem);
   overflow-y: auto;
   padding: 1.75rem 2rem 2rem;
   margin: auto;
@@ -601,11 +613,37 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   .list-wrap { padding: 1rem 1.25rem 2.5rem; }
   .field-row { grid-template-columns: 1fr; }
   .modal { padding: 1.5rem 1.25rem 1.75rem; }
+
+  /* Sem isso, o Safari/Chrome no iOS dá zoom na página inteira sempre que
+     um campo com fonte menor que 16px recebe foco — acontecia em todo
+     campo do app, já que o texto normal é 15px. */
+  input, select, textarea { font-size: 16px; }
+
+  /* Alvos de toque maiores (recomendação de ~44px) para os botões que só
+     de ícone: o de ditado por voz (não esticava com o textarea, então
+     ficava baixinho) e o X de fechar o modal. */
+  .dictate-btn { min-height: 44px; padding: 0 .9rem; }
+  .icon-btn { width: 44px; height: 44px; }
 }
 
 @media (max-width: 480px) {
   .auth-card { padding: 1.75rem 1.25rem; }
   .entry-list { grid-template-columns: 1fr; }
+
+  /* Empilha busca e "+ Novo registro" em vez de deixar o botão flutuando
+     com largura imprevisível quando não cabe ao lado da busca. */
+  .topbar { flex-direction: column; align-items: stretch; }
+  .search-wrap input { max-width: none; }
+  #newEntryBtn { width: 100%; }
+
+  /* Em telas bem pequenas, a margem generosa do modal (2rem em cima e
+     embaixo) sobra pouco espaço útil para o formulário — ainda mais com
+     o teclado virtual aberto — então aqui ela fica mais enxuta. */
+  .modal-backdrop { padding: 1rem .75rem; }
+  .modal {
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
