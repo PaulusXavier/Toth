@@ -177,6 +177,9 @@ function abrirModalViaAtalho() {
 
 auth.onAuthStateChanged((user) => {
     currentUser = user;
+    // Avisa o paulus-toth.js (painel da IA): só abre com conta logada e é removido ao sair.
+    window.__tothLogado = !!user;
+    document.dispatchEvent(new CustomEvent('toth:auth', { detail: { logado: !!user } }));
     if (user) {
         mostrarTelaAuth(false);
         document.getElementById('userEmailLabel').textContent = user.email || '';

@@ -11,6 +11,8 @@
 //   TothMascot.falar("mensagem", { duracao: 6000 })  -> mostra um balão de fala
 //   TothMascot.acenar()                               -> só faz o aceno, sem falar
 //   TothMascot.esconder() / TothMascot.mostrar()       -> some/aparece de vez
+//   TothMascot.aoClicar(fn)                           -> fn() roda ao tocar; se devolver true, a dica aleatória não aparece
+//                                                        (usado por paulus-toth.js para abrir o painel do Paulus)
 //
 // O mascote fica sempre atrás de modais (z-index abaixo de .modal-backdrop)
 // e só a área da própria medalha responde a toque — nunca atrapalha o
@@ -27,11 +29,12 @@
     "As abas da barra lateral filtram por tipo: atendimento, visita domiciliar, visita técnica ou grupo.",
     "Marque o status como 'Acompanhamento pendente' para não perder de vista um caso em aberto.",
     "Seus registros sincronizam pela nuvem — entre com a mesma conta em outro aparelho e tudo aparece lá.",
-    "Precisa levar seus registros para outro lugar? Exporte em Word, PDF, CSV ou JSON pelo menu lateral."
+    "Precisa levar seus registros para outro lugar? Exporte em Word, PDF, CSV ou JSON pelo menu lateral.",
+    "Tem dúvida sobre o app ou o SUAS? Toque em mim, depois de entrar na conta, para conversar com o Paulus."
   ];
 
   var LS_KEY = "tothMascotVisto";
-  var raiz, balao, cartao, textoBalao, escondeTimer;
+  var raiz, balao, cartao, textoBalao, escondeTimer, aoClicarFn = null;
 
   function css() {
     return (
@@ -130,6 +133,11 @@
     cartao.setAttribute("aria-label", "Toth, o mascote do app — toque para uma dica");
     cartao.innerHTML = SVG_MEDALHA;
     cartao.addEventListener("click", function () {
+      if (aoClicarFn) {
+        var tratou = false;
+        try { tratou = aoClicarFn() === true; } catch (e) {}
+        if (tratou) { acenar(); return; }
+      }
       var dica = DICAS[Math.floor(Math.random() * DICAS.length)];
       falar(dica);
     });
@@ -171,7 +179,9 @@
     raiz.classList.remove("toth-escondido");
   }
 
-  window.TothMascot = { falar: falar, acenar: acenar, esconder: esconder, mostrar: mostrar };
+  function aoClicar(fn) { aoClicarFn = typeof fn === "function" ? fn : null; }
+
+  window.TothMascot = { falar: falar, acenar: acenar, esconder: esconder, mostrar: mostrar, aoClicar: aoClicar };
 
   function iniciar() {
     montar();
